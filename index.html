@@ -48,8 +48,6 @@
         const SUPABASE_KEY = 'sb_publishable_bCXPU0JSPeF-tG4OkHSXsQ_wyyRyC0w';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentUserRole = "زائر";
-        let currentUserType = "زائر";
         let currentUserId = null;
         let selectedBrand = "";
         let selectedModel = "";
@@ -104,10 +102,6 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
-
-                        <div class="bg-blue-50/60 border border-blue-100 px-3.5 py-2 rounded-xl text-blue-700 text-xs sm:text-sm font-semibold shadow-sm">
-                            ${currentUserRole}
-                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -127,8 +121,40 @@
 
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
-            if (sidebarContainer) {
-                sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">القائمة الرئيسية</div>`;
+            if (!sidebarContainer) return;
+
+            sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">جاري التحميل...</div>`;
+
+            try {
+                // جلب عناصر القائمة الرئيسية باستخدام الـ id الحالي للمستخدم بأمان تام
+                const { data, error } = await supabaseClient.rpc('get_main_menu', {
+                    p_user_id: currentUserId
+                });
+
+                if (error) {
+                    sidebarContainer.innerHTML = `<div class="text-center text-red-400 text-xs py-4">تعذر تحميل القائمة</div>`;
+                    return;
+                }
+
+                let menuItems = [];
+                if (Array.isArray(data)) {
+                    menuItems = data;
+                } else if (typeof data === 'string') {
+                    try { menuItems = JSON.parse(data); } catch(e){}
+                }
+
+                if (menuItems && menuItems.length > 0) {
+                    sidebarContainer.innerHTML = menuItems.map(item => `
+                        <div onclick="alert('${item}')" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3 rounded-xl cursor-pointer transition-all text-sm font-semibold text-gray-800 flex items-center justify-between">
+                            <span dir="auto">${item}</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </div>
+                    `).join('');
+                } else {
+                    sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">لا توجد عناصر متاحة</div>`;
+                }
+            } catch (err) {
+                sidebarContainer.innerHTML = `<div class="text-center text-red-400 text-xs py-4">خطأ في الاتصال</div>`;
             }
         }
 
@@ -155,80 +181,38 @@
                                     <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
                                 </div>
                                 
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                                    <label for="rememberMe" class="text-xs font-semibold text-gray-600 cursor-pointer">تذكرني</label>
-                                </div>
-
                                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">
                                     تسجيل الدخول
                                 </button>
                             </form>
                         </div>
-
-                        <div class="relative my-6">
-                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-                            <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
-                        </div>
-
-                        <div>
-                            <button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
-                                الدخول كزائر
-                            </button>
-                        </div>
                     </div>
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
-            
-            if (localStorage.getItem('saved_phone')) {
-                const phoneInput = document.getElementById('loginPhone');
-                const passInput = document.getElementById('loginPassword');
-                const rememberCheckbox = document.getElementById('rememberMe');
-                
-                if (phoneInput) phoneInput.value = localStorage.getItem('saved_phone');
-                if (passInput) passInput.value = localStorage.getItem('saved_password');
-                if (rememberCheckbox) rememberCheckbox.checked = true;
-            }
         }
 
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
-            const rememberMe = document.getElementById('rememberMe')?.checked;
 
-            if (rememberMe) {
-                localStorage.setItem('saved_phone', phone);
-                localStorage.setItem('saved_password', password);
-            } else {
-                localStorage.removeItem('saved_phone');
-                localStorage.removeItem('saved_password');
-            }
-
-            const { error } = await supabaseClient.rpc('login', { 
+            // استدعاء دالة الـ login الآمنة التي ترجع الـ id بصيغة JSONB
+            const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
                 p_password: password 
             });
 
-            if (error) {
-                showSystemAlert("خطأ في تسجيل الدخول", phone || "غير متوفر", "فشل التحقق من الاعتماد", error.message);
+            if (error || !data || !data.id) {
+                showSystemAlert("خطأ في تسجيل الدخول", phone || "غير متوفر", "فشل التحقق", error?.message || "بيانات غير صحيحة");
                 return;
             }
 
-            currentUserRole = phone;
-            currentUserId = phone; 
+            // تخزين الـ id الحقيقي للمستخدم الحالي للاستخدام في التحقق والصلاحيات
+            currentUserId = data.id; 
 
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
-        }
-
-        function loginAsVisitor() {
-            currentUserRole = "زائر";
-            currentUserType = "زائر";
-            currentUserId = null;
-            renderMainDashboard();
-            loadDynamicMenuIntoSidebar();
         }
 
         async function renderMainDashboard() {
@@ -252,7 +236,7 @@
                 const { data, error } = await supabaseClient.rpc('get_partitions');
 
                 if (error) {
-                    showSystemAlert("فشل جلب الأقسام", currentUserId || "زائر", "قاعدة البيانات", error.message);
+                    showSystemAlert("فشل جلب الأقسام", currentUserId || "غير معروف", "قاعدة البيانات", error.message);
                     document.getElementById('partitionsContainer').innerHTML = `<div class="text-center text-red-400 text-sm py-4">تعذر تحميل الأقسام</div>`;
                     return;
                 }
@@ -277,7 +261,6 @@
                         return `
                             <div onclick="${clickAction}" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
                                 <span class="font-bold text-lg sm:text-xl" dir="auto">${name}</span>
-                                <!-- سهم الأقسام يشير لليمين -->
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                             </div>
                         `;
@@ -288,7 +271,7 @@
                     container.innerHTML = `<div class="text-center text-gray-400 text-sm py-4">لا توجد أقسام متاحة</div>`;
                 }
             } catch (err) {
-                showSystemAlert("استثناء غير متوقع", currentUserId || "زائر", "تنفيذ JavaScript", err.message);
+                showSystemAlert("استثناء غير متوقع", currentUserId || "غير معروف", "تنفيذ JavaScript", err.message);
             }
         }
 
@@ -299,7 +282,7 @@
             if (!error && data) {
                 brands = data.map(item => item.brand_name || item.name || Object.values(item)[1]); 
             } else if (error) {
-                showSystemAlert("فشل جلب الماركات", currentUserId || "زائر", "جدول brands", error.message);
+                showSystemAlert("فشل جلب الماركات", currentUserId || "غير معروف", "جدول brands", error.message);
             }
 
             let brandsHtml = "";
@@ -321,7 +304,6 @@
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <!-- سهم زر الرجوع يشير لليسار -->
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -410,7 +392,6 @@
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <!-- سهم زر الرجوع يشير لليسار -->
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -434,7 +415,6 @@
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <!-- سهم زر الرجوع يشير لليسار -->
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -450,12 +430,12 @@
                 const { data, error } = await supabaseClient.rpc('get_spare_parts');
 
                 if (error) {
-                    showSystemAlert("فشل جلب قطع الغيار", currentUserId || "زائر", "دالة get_spare_parts", error.message);
+                    showSystemAlert("فشل جلب قطع الغيار", currentUserId || "غير معروف", "دالة get_spare_parts", error.message);
                 } else if (data) {
                     sparePartsList = data;
                 }
             } catch (err) {
-                showSystemAlert("استثناء في جلب قطع الغيار", currentUserId || "زائر", "تنفيذ RPC", err.message);
+                showSystemAlert("استثناء في جلب قطع الغيار", currentUserId || "غير معروف", "تنفيذ RPC", err.message);
             }
 
             let partsHtml = "";
@@ -465,7 +445,6 @@
                     return `
                         <div onclick="renderPartDetails('${part}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
                             <span class="font-bold text-gray-800 text-right flex-1 ml-3" dir="auto">${part}</span>
-                            <!-- سهم كروت قطع الغيار يشير لليمين -->
                             <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </div>
                     `;
@@ -478,7 +457,6 @@
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <!-- سهم زر الرجوع يشير لليسار -->
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -503,10 +481,10 @@
                 if (!error && data) {
                     menuItems = data;
                 } else {
-                    showSystemAlert("فشل جلب عناصر القائمة", currentUserId || "زائر", "دالة get_menu_items_by_part_name", error?.message);
+                    showSystemAlert("فشل جلب عناصر القائمة", currentUserId || "غير معروف", "دالة get_menu_items_by_part_name", error?.message);
                 }
             } catch (err) {
-                showSystemAlert("استثناء في جلب القائمة", currentUserId || "زائر", "تنفيذ RPC", err.message);
+                showSystemAlert("استثناء في جلب القائمة", currentUserId || "غير معروف", "تنفيذ RPC", err.message);
             }
 
             let dynamicSectionsHtml = "";
@@ -556,7 +534,6 @@
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
                     <button onclick="renderPartsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <!-- سهم زر الرجوع يشير لليسار -->
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
