@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>قاموس المصطلحات</title>
+    <title>قاموس البحث السريع</title>
     <!-- استيراد خط عربي حديث -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -52,6 +52,8 @@
             font-size: 1rem;
             outline: none;
             transition: border-color 0.3s;
+            direction: ltr;
+            text-align: left;
         }
 
         input:focus {
@@ -94,11 +96,15 @@
         .word-header h2 {
             font-size: 1.5rem;
             color: #f1f5f9;
+            direction: ltr;
+            text-align: right;
         }
 
         .phonetic {
             color: #94a3b8;
             font-size: 0.95rem;
+            direction: ltr;
+            display: inline-block;
         }
 
         .audio-btn {
@@ -133,6 +139,8 @@
             margin-bottom: 8px;
             padding-right: 15px;
             border-right: 2px solid #334155;
+            direction: ltr;
+            text-align: left;
         }
 
         .definition {
@@ -169,7 +177,7 @@
         <h1>قاموس البحث السريع</h1>
         
         <div class="search-box">
-            <input type="text" id="wordInput" placeholder="اكتب كلمة بالإنجليزية للبحث عنها..." />
+            <input type="text" id="wordInput" placeholder="اكتب كلمة بالإنجليزية..." />
             <button onclick="searchWord()">بحث</button>
         </div>
 
@@ -191,7 +199,6 @@
     <script>
         let audioUrl = '';
 
-        // السماح بالبحث عند الضغط على زر Enter
         document.getElementById('wordInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 searchWord();
@@ -207,7 +214,6 @@
 
             if (!word) return;
 
-            // إخفاء النتائج القديمة وإظهار التحميل
             resultContainer.style.display = 'none';
             errorMessage.style.display = 'none';
             loading.style.display = 'block';
@@ -222,11 +228,9 @@
                 const data = await response.json();
                 const entry = data[0];
 
-                // عرض الكلمة والنطق
                 document.getElementById('resultWord').textContent = entry.word;
                 document.getElementById('resultPhonetic').textContent = entry.phonetic || (entry.phonetics.find(p => p.text) || {}).text || '';
 
-                // البحث عن رابط الصوت إن وجد
                 const phoneticWithAudio = entry.phonetics.find(p => p.audio && p.audio.trim() !== '');
                 if (phoneticWithAudio) {
                     audioUrl = phoneticWithAudio.audio;
@@ -236,7 +240,6 @@
                     audioBtn.style.display = 'none';
                 }
 
-                // عرض المعاني والأقسام
                 const meaningsContainer = document.getElementById('meaningsContainer');
                 meaningsContainer.innerHTML = '';
 
@@ -261,7 +264,7 @@
                         if (def.example) {
                             const exText = document.createElement('div');
                             exText.className = 'example';
-                            exText.textContent = `مثال: "${def.example}"`;
+                            exText.textContent = `Example: "${def.example}"`;
                             defItem.appendChild(exText);
                         }
 
@@ -274,10 +277,6 @@
                 loading.style.display = 'none';
                 resultContainer.style.display = 'block';
 
-            } data => {
-                // خطأ في جلب البيانات
-                loading.style.display = 'none';
-                errorMessage.style.display = 'block';
             } catch (error) {
                 loading.style.display = 'none';
                 errorMessage.style.display = 'block';
