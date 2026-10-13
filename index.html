@@ -211,7 +211,7 @@
             });
 
             if (error) {
-                alert(`❌ خطأ: ${error.message}`);
+                alert(`❌ خطأ في تسجيل الدخول:\n${error.message}`);
                 return;
             }
 
@@ -247,21 +247,29 @@
             document.getElementById('appContainer').innerHTML = html;
             loadDynamicMenuIntoSidebar();
 
-            // جلب الأقسام ديناميكياً باستخدام دالة get_partitions
+            // جلب الأقسام وإظهار أخطاء تفصيلية عبر alert عند حدوث أي عطل
             try {
-                const { data: partitions, error } = await supabaseClient.rpc('get_partitions');
+                const { data, error } = await supabaseClient.rpc('get_partitions');
 
                 if (error) {
-                    console.error("خطأ في جلب الأقسام:", error.message);
+                    alert(`❌ خطأ من سوبابيس أثناء جلب الأقسام:\n${error.message}\nCode: ${error.code}`);
                     document.getElementById('partitionsContainer').innerHTML = `<div class="text-center text-red-400 text-sm py-4">تعذر تحميل الأقسام</div>`;
                     return;
                 }
 
+                // معالجة صيغة النتيجة (تحديد ما إذا كانت Matrix أو Array)
+                let partitionsList = [];
+                if (Array.isArray(data)) {
+                    partitionsList = data.map(item => typeof item === 'object' ? (item.partition_name || item.partition_names || Object.values(item)[0]) : item);
+                } else if (typeof data === 'string') {
+                    try { partitionsList = JSON.parse(data); } catch(e){}
+                }
+
                 const container = document.getElementById('partitionsContainer');
-                if (container && partitions && partitions.length > 0) {
-                    let partitionsHtml = partitions.map(name => {
+                if (container && partitionsList && partitionsList.length > 0) {
+                    let partitionsHtml = partitionsList.map(name => {
                         let clickAction = "alert('قسم " + name + "')";
-                        if (name.includes('قطع الغيار') || name.includes('الماركات')) {
+                        if (name.includes('قطع الغيار') || name.includes('الماركات') || name.includes('شراء')) {
                             clickAction = "renderBrandsScreen()";
                         }
 
@@ -275,9 +283,11 @@
 
                     container.innerHTML = partitionsHtml;
                 } else {
+                    alert(`⚠ لم يتم إرجاع أي أقسام من دالة get_partitions (النتيجة فارغة).`);
                     container.innerHTML = `<div class="text-center text-gray-400 text-sm py-4">لا توجد أقسام متاحة</div>`;
                 }
             } catch (err) {
+                alert(`💥 استثناء غير متوقع في JavaScript:\n${err.message}`);
                 console.error("خطأ استثنائي:", err);
             }
         }
@@ -289,7 +299,7 @@
             if (!error && data) {
                 brands = data.map(item => item.brand_name || item.name || Object.values(item)[1]); 
             } else if (error) {
-                alert(`❌ خطأ: ${error.message}`);
+                alert(`❌ خطأ في جلب الماركات:\n${error.message}`);
             }
 
             let brandsHtml = "";
