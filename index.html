@@ -267,8 +267,16 @@
                 const container = document.getElementById('partitionsContainer');
                 if (container && partitionsList && partitionsList.length > 0) {
                     let partitionsHtml = partitionsList.map(name => {
+                        // التحقق إذا كان القسم خاص بقطع الغيار لربطه بالدالة مباشرة
+                        let clickAction = "";
+                        if (name.includes('قطع الغيار') || name.includes('شراء')) {
+                            clickAction = "renderPartsScreen()";
+                        } else {
+                            clickAction = `alert('قسم ${name}')`;
+                        }
+
                         return `
-                            <div class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
+                            <div onclick="${clickAction}" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
                                 <span class="font-bold text-lg sm:text-xl">${name}</span>
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                             </div>
@@ -400,7 +408,7 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -414,7 +422,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        async function renderPartsScreen(modelName, modelCode, screenCompat, batteryModel) {
+        async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
             selectedModel = modelName;
             selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
             currentScreenCompatibility = screenCompat ? decodeURIComponent(screenCompat) : '';
@@ -423,11 +431,11 @@
             document.getElementById('appContainer').innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderModelsScreen('${selectedBrand}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر قطعة الغيار (${selectedModel})</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
                 </div>
                 <div class="flex-1 flex items-center justify-center">
                     <p class="text-gray-500 text-sm">جاري جلب قطع الغيار من قاعدة البيانات...</p>
@@ -435,12 +443,17 @@
             `;
 
             let sparePartsList = [];
-            const { data, error } = await supabaseClient.from('spare_parts').select('*').order('id', { ascending: true });
+            try {
+                // استخدام دالة الـ RPC الآمنة لتخطي قيود RLS للجدول المحمي
+                const { data, error } = await supabaseClient.rpc('get_spare_parts');
 
-            if (!error && data) {
-                sparePartsList = data.map(item => item.part_name || item.name || Object.values(item)[1]);
-            } else {
-                showSystemAlert("فشل جلب قطع الغيار", currentUserId || "زائر", "جدول spare_parts", error?.message);
+                if (error) {
+                    showSystemAlert("فشل جلب قطع الغيار", currentUserId || "زائر", "دالة get_spare_parts", error.message);
+                } else if (data) {
+                    sparePartsList = data;
+                }
+            } catch (err) {
+                showSystemAlert("استثناء في جلب قطع الغيار", currentUserId || "زائر", "تنفيذ RPC", err.message);
             }
 
             let partsHtml = "";
@@ -461,11 +474,11 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderModelsScreen('${selectedBrand}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر قطعة الغيار (${selectedModel})</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
                 </div>
                 <div class="flex-1 overflow-y-auto space-y-3 p-1">
                     ${partsHtml}
@@ -538,11 +551,11 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderPartsScreen('${selectedModel}', '${encodeURIComponent(selectedModelCode)}', '${encodeURIComponent(currentScreenCompatibility)}', '${encodeURIComponent(currentBatteryModel)}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderPartsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">${selectedModel} - ${part}</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">${part}</h2>
                 </div>
                 <div class="flex-1 overflow-y-auto space-y-3 p-1">
                     ${dynamicSectionsHtml}
