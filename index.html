@@ -169,6 +169,12 @@
                             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-40 sm:h-52 object-cover rounded-2xl shadow-md">
                         </div>
 
+                        <!-- أزرار التبديل بين تسجيل الدخول وإنشاء الحساب -->
+                        <div class="bg-gray-100 p-1.5 rounded-2xl flex items-center mb-6 border border-gray-200">
+                            <button class="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl shadow-sm text-sm transition-all">تسجيل الدخول</button>
+                            <button onclick="alert('شاشة إنشاء حساب')" class="flex-1 text-gray-500 font-semibold py-2.5 rounded-xl text-sm transition-all hover:text-gray-700">إنشاء حساب</button>
+                        </div>
+
                         <div id="loginFormContainer">
                             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                                 <div>
@@ -196,10 +202,7 @@
                             <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="alert('شاشة إنشاء حساب')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
-                                إنشاء حساب
-                            </button>
+                        <div>
                             <button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
                                 الدخول كزائر
                             </button>
@@ -234,6 +237,7 @@
                 localStorage.removeItem('saved_password');
             }
 
+            // استدعاء دالة الـ login الآمنة التي ترجع الـ id بصيغة JSONB
             const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
                 p_password: password 
@@ -244,6 +248,7 @@
                 return;
             }
 
+            // تخزين الـ id الحقيقي للمستخدم الحالي للاستخدام في التحقق والصلاحيات
             currentUserId = data.id; 
 
             renderMainDashboard();
