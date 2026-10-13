@@ -205,7 +205,6 @@
                 localStorage.removeItem('saved_password');
             }
 
-            // استدعاء دالة الـ RPC الجديدة (login) برقم الهاتف ورمز المرور فقط
             const { error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
                 p_password: password 
@@ -231,7 +230,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        function renderMainDashboard() {
+        async function renderMainDashboard() {
             const html = `
                 ${getHeaderTemplate()}
 
@@ -240,31 +239,47 @@
                         <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md">
                     </div>
 
-                    <div class="space-y-3.5 pb-4">
-                        <div onclick="renderBrandsScreen()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                            <span class="font-bold text-lg sm:text-xl">الماركات</span>
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-
-                        <div onclick="alert('قسم التوافقات')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                            <span class="font-bold text-lg sm:text-xl">التوافقات</span>
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-
-                        <div onclick="alert('تنبيهات بعد التركيب')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                            <span class="font-bold text-lg sm:text-xl">تنبيهات بعد التركيب</span>
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-
-                        <div onclick="alert('للتواصل مع الشركة')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                            <span class="font-bold text-lg sm:text-xl">التواصل مع الشركة</span>
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
+                    <div id="partitionsContainer" class="space-y-3.5 pb-4">
+                        <div class="text-center text-gray-400 text-sm py-4">جاري تحميل الأقسام...</div>
                     </div>
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
             loadDynamicMenuIntoSidebar();
+
+            // جلب الأقسام ديناميكياً باستخدام دالة get_partitions
+            try {
+                const { data: partitions, error } = await supabaseClient.rpc('get_partitions');
+
+                if (error) {
+                    console.error("خطأ في جلب الأقسام:", error.message);
+                    document.getElementById('partitionsContainer').innerHTML = `<div class="text-center text-red-400 text-sm py-4">تعذر تحميل الأقسام</div>`;
+                    return;
+                }
+
+                const container = document.getElementById('partitionsContainer');
+                if (container && partitions && partitions.length > 0) {
+                    let partitionsHtml = partitions.map(name => {
+                        let clickAction = "alert('قسم " + name + "')";
+                        if (name.includes('قطع الغيار') || name.includes('الماركات')) {
+                            clickAction = "renderBrandsScreen()";
+                        }
+
+                        return `
+                            <div onclick="${clickAction}" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
+                                <span class="font-bold text-lg sm:text-xl">${name}</span>
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </div>
+                        `;
+                    }).join('');
+
+                    container.innerHTML = partitionsHtml;
+                } else {
+                    container.innerHTML = `<div class="text-center text-gray-400 text-sm py-4">لا توجد أقسام متاحة</div>`;
+                }
+            } catch (err) {
+                console.error("خطأ استثنائي:", err);
+            }
         }
 
         async function renderBrandsScreen() {
