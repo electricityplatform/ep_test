@@ -126,7 +126,6 @@
             sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">جاري التحميل...</div>`;
 
             try {
-                // جلب عناصر القائمة الرئيسية باستخدام الـ id الحالي للمستخدم بأمان تام
                 const { data, error } = await supabaseClient.rpc('get_main_menu', {
                     p_user_id: currentUserId
                 });
@@ -191,6 +190,20 @@
                                 </button>
                             </form>
                         </div>
+
+                        <div class="relative my-6">
+                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+                            <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="alert('شاشة إنشاء حساب')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
+                                إنشاء حساب
+                            </button>
+                            <button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
+                                الدخول كزائر
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -221,7 +234,6 @@
                 localStorage.removeItem('saved_password');
             }
 
-            // استدعاء دالة الـ login الآمنة التي ترجع الـ id بصيغة JSONB
             const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
                 p_password: password 
@@ -232,11 +244,16 @@
                 return;
             }
 
-            // تخزين الـ id الحقيقي للمستخدم الحالي للاستخدام في التحقق والصلاحيات
             currentUserId = data.id; 
 
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
+        }
+
+        function loginAsVisitor() {
+            currentUserId = null;
+            renderMainDashboard();
+            loadDynamicMenuIntoSidebar();
         }
 
         async function renderMainDashboard() {
