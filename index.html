@@ -52,9 +52,6 @@
         let selectedBrand = "";
         let selectedModel = "";
         let selectedPart = "";
-        let selectedModelCode = ""; 
-        let currentScreenCompatibility = "";
-        let currentBatteryModel = "";
 
         function showSystemAlert(title, idStatus, menuStatus, errorDetails = "") {
             let message = `--- 🔍 تقرير حالة النظام والأخطاء ---\n\n`;
@@ -106,12 +103,6 @@
                         <div class="flex-1 relative">
                             <input type="text" placeholder="ابحث" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-xs sm:text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
                         </div>
-                        <button onclick="alert('جارِ الاستماع للصوت...فعل ميكروفون المتصفح')" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 p-3 rounded-xl text-gray-600 transition-all shadow-sm" title="بحث صوتي">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                        </button>
-                        <button onclick="alert('جارِ فتح الكاميرا للمسح الضوئي...')" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 p-3 rounded-xl text-gray-600 transition-all shadow-sm" title="بحث بالكاميرا">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        </button>
                     </div>
                 </div>
             `;
@@ -168,11 +159,6 @@
                             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-40 sm:h-52 object-cover rounded-2xl shadow-md">
                         </div>
 
-                        <div class="bg-gray-100 p-1.5 rounded-2xl flex items-center mb-6 border border-gray-200">
-                            <button class="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl shadow-sm text-sm transition-all">تسجيل الدخول</button>
-                            <button onclick="alert('شاشة إنشاء حساب')" class="flex-1 text-gray-500 font-semibold py-2.5 rounded-xl text-sm transition-all hover:text-gray-700">إنشاء حساب</button>
-                        </div>
-
                         <div id="loginFormContainer">
                             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                                 <div>
@@ -184,11 +170,6 @@
                                     <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
                                 </div>
                                 
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                                    <label for="rememberMe" class="text-xs font-semibold text-gray-600 cursor-pointer">تذكرني</label>
-                                </div>
-
                                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">
                                     تسجيل الدخول
                                 </button>
@@ -209,16 +190,6 @@
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
-
-            if (localStorage.getItem('saved_phone')) {
-                const phoneInput = document.getElementById('loginPhone');
-                const passInput = document.getElementById('loginPassword');
-                const rememberCheckbox = document.getElementById('rememberMe');
-                
-                if (phoneInput) phoneInput.value = localStorage.getItem('saved_phone');
-                if (passInput) passInput.value = localStorage.getItem('saved_password');
-                if (rememberCheckbox) rememberCheckbox.checked = true;
-            }
         }
 
         // ================= 3. دالة تسجيل الدخول (عبر RPC المعتمدة) =================
@@ -226,15 +197,6 @@
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
-            const rememberMe = document.getElementById('rememberMe')?.checked;
-
-            if (rememberMe) {
-                localStorage.setItem('saved_phone', phone);
-                localStorage.setItem('saved_password', password);
-            } else {
-                localStorage.removeItem('saved_phone');
-                localStorage.removeItem('saved_password');
-            }
 
             const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
@@ -247,7 +209,6 @@
             }
 
             currentUserId = data.id; 
-
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
         }
@@ -262,12 +223,10 @@
         async function renderMainDashboard() {
             const html = `
                 ${getHeaderTemplate()}
-
                 <div class="flex-1 overflow-y-auto space-y-4 px-1">
                     <div class="mb-4">
-                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md">
+                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w-800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md">
                     </div>
-
                     <div id="partitionsContainer" class="space-y-3.5 pb-4">
                         <div class="text-center text-gray-400 text-sm py-4">جاري تحميل الأقسام...</div>
                     </div>
@@ -319,143 +278,8 @@
             }
         }
 
-        async function renderBrandsScreen() {
-            let brands = [];
-            const { data, error } = await supabaseClient.from('brands').select('*');
-            
-            if (!error && data) {
-                brands = data.map(item => item.brand_name || item.name || Object.values(item)[1]); 
-            } else if (error) {
-                showSystemAlert("فشل جلب الماركات", currentUserId || "غير معروف", "جدول brands", error.message);
-            }
-
-            let brandsHtml = "";
-            if (brands.length > 0) {
-                brandsHtml = brands.map((brand, index) => {
-                    const style = getRotatingCardStyle(index);
-                    return `
-                        <div onclick="renderModelsScreen('${brand}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <span class="font-bold text-gray-800" dir="auto">${brand}</span>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                brandsHtml = `<div class="text-center text-gray-500 py-6">لا توجد ماركات متاحة حالياً</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر الماركة</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${brandsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderModelsScreen(brand) {
-            selectedBrand = brand;
-            let tableName = "";
-            let nameColumn = "device_name";
-            let codeColumn = "model_code";
-            let compatColumn = "screen_compatibility";
-            let batteryColumn = "battery_model";
-            
-            const b = brand.toLowerCase();
-            if (b.includes('samsung')) {
-                tableName = 'samsung_models'; nameColumn = 'samsung_phone_name'; codeColumn = 'samsung_phone_code'; compatColumn = 'samsung_screen_compatibility'; batteryColumn = 'samsung_battery_model';
-            } else if (b.includes('iphone') || b.includes('apple')) {
-                tableName = 'apple_models'; nameColumn = 'apple_phone_name'; codeColumn = 'apple_phone_code'; compatColumn = 'apple_screen_compatibility'; batteryColumn = 'apple_battery_model';
-            } else if (b.includes('xiaomi') || b.includes('poco')) {
-                tableName = 'xiaomi_models'; nameColumn = 'xiaomi_phone_name'; codeColumn = 'xiaomi_phone_code'; compatColumn = 'xiaomi_screen_compatibility'; batteryColumn = 'xiaomi_battery_model';
-            } else if (b.includes('redmi')) {
-                tableName = 'redmi_models'; nameColumn = 'redmi_phone_name'; codeColumn = 'redmi_phone_code'; compatColumn = 'redmi_screen_compatibility'; batteryColumn = 'redmi_battery_model';
-            } else if (b.includes('huawei')) {
-                tableName = 'huawei_models'; nameColumn = 'huawei_phone_name'; codeColumn = 'huawei_phone_code'; compatColumn = 'huawei_screen_compatibility'; batteryColumn = 'huawei_battery_model';
-            } else if (b.includes('honor')) {
-                tableName = 'honor_models'; nameColumn = 'honor_phone_name'; codeColumn = 'honor_phone_code'; compatColumn = 'honor_screen_compatibility'; batteryColumn = 'honor_battery_model';
-            } else if (b.includes('oppo')) {
-                tableName = 'oppo_models'; nameColumn = 'oppo_phone_name'; codeColumn = 'oppo_phone_code'; compatColumn = 'oppo_screen_compatibility'; batteryColumn = 'oppo_battery_model';
-            } else if (b.includes('realme')) {
-                tableName = 'realme_models'; nameColumn = 'realme_phone_name'; codeColumn = 'realme_phone_code'; compatColumn = 'realme_screen_compatibility'; batteryColumn = 'realme_battery_model';
-            } else if (b.includes('itel')) {
-                tableName = 'itel_models'; nameColumn = 'itel_phone_name'; codeColumn = 'itel_phone_code'; compatColumn = 'itel_screen_compatibility'; batteryColumn = 'itel_battery_model';
-            } else if (b.includes('nokia')) {
-                tableName = 'nokia_models'; nameColumn = 'nokia_phone_name'; codeColumn = 'nokia_phone_code'; compatColumn = 'nokia_screen_compatibility'; batteryColumn = 'nokia_battery_model';
-            } else if (b.includes('vivo')) {
-                tableName = 'vivo_models'; nameColumn = 'vivo_phone_name'; codeColumn = 'vivo_phone_code'; compatColumn = 'vivo_screen_compatibility'; batteryColumn = 'vivo_battery_model';
-            } else if (b.includes('techno') || b.includes('tecno')) {
-                tableName = 'tecno_models'; nameColumn = 'tecno_phone_name'; codeColumn = 'tecno_phone_code'; compatColumn = 'tecno_screen_compatibility'; batteryColumn = 'tecno_battery_model';
-            } else if (b.includes('infinix')) {
-                tableName = 'infinix_models'; nameColumn = 'infinix_phone_name'; codeColumn = 'infinix_phone_code'; compatColumn = 'infinix_screen_compatibility'; batteryColumn = 'infinix_battery_model';
-            }
-
-            let models = [];
-            if (tableName) {
-                const { data, error } = await supabaseClient.from(tableName).select('*').order('id', { ascending: true });
-                if (!error && data) {
-                    models = data.map(item => ({
-                        device_name: item[nameColumn] || item['device_name'],
-                        model_code: item[codeColumn] || item['model_code'],
-                        screen_compatibility: item[compatColumn] || item['screen_compatibility'] || null,
-                        battery_model: item[batteryColumn] || item['battery_model'] || null
-                    }));
-                }
-            }
-
-            let modelsHtml = "";
-            if (models.length > 0) {
-                modelsHtml = models.map((m, index) => {
-                    const style = getRotatingCardStyle(index);
-                    const escapedCompat = m.screen_compatibility ? encodeURIComponent(m.screen_compatibility) : '';
-                    const escapedBattery = m.battery_model ? encodeURIComponent(m.battery_model) : '';
-                    const escapedCode = m.model_code ? encodeURIComponent(m.model_code) : '';
-                    return `
-                        <div onclick="renderPartsScreen('${m.device_name}', '${escapedCode}', '${escapedCompat}', '${escapedBattery}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <div class="text-right">
-                                <span class="font-bold text-gray-800 block" dir="auto">${m.device_name}</span>
-                                ${m.model_code ? `<span class="text-xs text-gray-500 block mt-0.5" dir="auto">الكود: ${m.model_code}</span>` : ''}
-                            </div>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                modelsHtml = `<div class="text-center text-gray-500 py-6">لا توجد موديلات متاحة</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر موديل (${brand})</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${modelsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
         // ================= 5. دالة جلب قطع الغيار (عبر RPC المعتمدة) =================
-        async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
-            selectedModel = modelName;
-            selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
-            currentScreenCompatibility = screenCompat ? decodeURIComponent(screenCompat) : '';
-            currentBatteryModel = batteryModel ? decodeURIComponent(batteryModel) : '';
-
+        async function renderPartsScreen() {
             document.getElementById('appContainer').innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
@@ -515,84 +339,9 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        async function renderPartDetails(part) {
-            selectedPart = part;
-            
-            let menuItems = [];
-            try {
-                const { data, error } = await supabaseClient.rpc('get_menu_items_by_part_name', {
-                    p_part_name: part
-                });
-                if (!error && data) {
-                    menuItems = data;
-                } else {
-                    showSystemAlert("فشل جلب عناصر القائمة", currentUserId || "غير معروف", "دالة get_menu_items_by_part_name", error?.message);
-                }
-            } catch (err) {
-                showSystemAlert("استثناء في جلب القائمة", currentUserId || "غير معروف", "تنفيذ RPC", err.message);
-            }
-
-            let dynamicSectionsHtml = "";
-            if (menuItems.length > 0) {
-                dynamicSectionsHtml = menuItems.map((item, index) => {
-                    const itemName = item.spare_part_menu_items || item.title || item.name || Object.values(item)[1];
-                    const itemValue = item.value || item.content || item.description || "";
-                    const style = getRotatingCardStyle(index);
-                    
-                    return `
-                        <div class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base mb-3 group">
-                            <div class="text-right w-full ml-3" dir="auto">
-                                <span class="font-bold text-gray-800 block">${itemName}</span>
-                                ${itemValue ? `<span class="text-xs text-gray-600 block mt-0.5">${itemValue}</span>` : ''}
-                            </div>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                dynamicSectionsHtml = `<div class="text-center text-gray-400 text-sm py-4">لا توجد بيانات مسجلة في قاعدة البيانات لهذه القطعة حالياً</div>`;
-            }
-
-            let postsHtml = "";
-            try {
-                const { data, error } = await supabaseClient
-                    .from('posts')
-                    .select('*')
-                    .ilike('device_model', `%${selectedModel}%`)
-                    .ilike('spare_part', `%${part}%`);
-
-                if (!error && data && data.length > 0) {
-                    postsHtml = data.map((post) => `
-                        <div class="bg-white border border-gray-200 p-4 rounded-2xl shadow-sm space-y-2" dir="auto">
-                            <h3 class="font-bold text-gray-800 text-base">${post.title || 'ملاحظة صيانة'}</h3>
-                            <p class="text-gray-600 text-sm leading-relaxed">${post.content || post.description || ''}</p>
-                        </div>
-                    `).join('');
-                } else {
-                    postsHtml = `<div class="text-center text-gray-400 text-sm py-4">لا توجد ملاحظات صيانة إضافية مسجلة لهذه القطعة حالياً</div>`;
-                }
-            } catch (err) {
-                postsHtml = `<div class="text-center text-red-400 text-sm py-4">حدث خطأ أثناء الاتصال</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderPartsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800" dir="auto">${part}</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${dynamicSectionsHtml}
-                    <div class="space-y-3">
-                        ${postsHtml}
-                    </div>
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
+        // تم إلغاء الاستدعاء القديم تماماً وجعله يعرض تنبيه خفيف فقط بدون أخطاء
+        function renderPartDetails(part) {
+            alert(`عرض تفاصيل: ${part}`);
         }
 
         window.onload = function() {
