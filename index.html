@@ -94,7 +94,7 @@
                     </div>
                     <h2 id="loginHistoryTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
                         <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        سجل تسجيل الدخول
+                        سجل دخول المستخدمين
                     </h2>
                 </div>
                 <div id="loginHistoryTableContainer" class="flex-1 overflow-y-auto p-1">
@@ -136,7 +136,7 @@
                 if (titleElement) {
                     titleElement.innerHTML = `
                         <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        سجل تسجيل الدخول (${historyList.length})
+                        سجل دخول المستخدمين (${historyList.length})
                     `;
                 }
 
@@ -190,7 +190,7 @@
 
         // ================= دالة عرض شاشة المستخدمين النشطين (الهيكل الأساسي) =================
         async function renderActiveUsersScreen() {
-            toggleSidebar(); // قفل القائمة الجانبية عند الاختيار
+            toggleSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -220,7 +220,6 @@
             await fetchAndDisplayActiveUsers();
         }
 
-        // ================= دالة جلب وتحديث الجدول في مكانه (لزر التحديث والفتح التلقائي) =================
         async function fetchAndDisplayActiveUsers() {
             const tableContainer = document.getElementById('activeUsersTableContainer');
             const titleElement = document.getElementById('activeUsersTitle');
@@ -287,7 +286,6 @@
                 } else {
                     contentHtml = `
                         <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                            <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             <p class="font-semibold">لا يوجد مستخدمون نشطون في آخر 21 ثانية</p>
                         </div>
                     `;
@@ -329,40 +327,23 @@
             }
         }
 
-        function getRotatingCardStyle(index) {
-            return { bg: "bg-gray-50 hover:bg-blue-50/60", border: "border-gray-200 hover:border-blue-200", text: "text-gray-800", icon: "text-gray-400 group-hover:text-blue-500" };
-        }
-
         function getHeaderTemplate() {
             return `
                 <div class="border-b border-gray-100 pb-4 mb-4 flex-shrink-0">
                     <div class="text-center mb-3">
                         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                     </div>
-
                     <div class="flex items-center justify-between mb-4">
                         <button onclick="toggleSidebar()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm transition-all cursor-pointer">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
                     </div>
-
-                    <div class="flex items-center gap-2">
-                        <div class="flex-1 relative">
-                            <input type="text" placeholder="ابحث" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-xs sm:text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
-                        </div>
-                        <button onclick="alert('جارِ الاستماع للصوت...فعل ميكروفون المتصفح')" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 p-3 rounded-xl text-gray-600 transition-all shadow-sm" title="بحث صوتي">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                        </button>
-                        <button onclick="alert('جارِ فتح الكاميرا للمسح الضوئي...')" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 p-3 rounded-xl text-gray-600 transition-all shadow-sm" title="بحث بالكاميرا">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        </button>
-                    </div>
                 </div>
             `;
         }
 
-        // ================= 2. دالة جلب المنيو الرئيسية (مع توجيه عنصر سجل الدخول) =================
+        // ================= 2. دالة جلب المنيو الرئيسية (مطابقة صحيحة تماماً لنص سجل دخول المستخدمين) =================
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
@@ -392,7 +373,7 @@
                         
                         if (item.includes('المستخدمون النشطون')) {
                             clickAction = "renderActiveUsersScreen()";
-                        } else if (item.includes('سجل تسجيل الدخول') || item.includes('سجل الدخول')) {
+                        } else if (item.includes('سجل دخول المستخدمين') || item.includes('سجل الدخول')) {
                             clickAction = "renderLoginHistoryScreen()";
                         }
 
@@ -419,15 +400,6 @@
                             <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                         </div>
 
-                        <div class="mb-6">
-                            <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-40 sm:h-52 object-cover rounded-2xl shadow-md">
-                        </div>
-
-                        <div class="bg-gray-100 p-1.5 rounded-2xl flex items-center mb-6 border border-gray-200">
-                            <button class="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl shadow-sm text-sm transition-all">تسجيل الدخول</button>
-                            <button onclick="alert('شاشة إنشاء حساب')" class="flex-1 text-gray-500 font-semibold py-2.5 rounded-xl text-sm transition-all hover:text-gray-700">إنشاء حساب</button>
-                        </div>
-
                         <div id="loginFormContainer">
                             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
                                 <div>
@@ -438,58 +410,21 @@
                                     <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
                                     <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
                                 </div>
-                                
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                                    <label for="rememberMe" class="text-xs font-semibold text-gray-600 cursor-pointer">تذكرني</label>
-                                </div>
-
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">
+                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm cursor-pointer">
                                     تسجيل الدخول
                                 </button>
                             </form>
-                        </div>
-
-                        <div class="relative my-6">
-                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-                            <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
-                        </div>
-
-                        <div>
-                            <button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
-                                الدخول كزائر
-                            </button>
                         </div>
                     </div>
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
-
-            if (localStorage.getItem('saved_phone')) {
-                const phoneInput = document.getElementById('loginPhone');
-                const passInput = document.getElementById('loginPassword');
-                const rememberCheckbox = document.getElementById('rememberMe');
-                
-                if (phoneInput) phoneInput.value = localStorage.getItem('saved_phone');
-                if (passInput) passInput.value = localStorage.getItem('saved_password');
-                if (rememberCheckbox) rememberCheckbox.checked = true;
-            }
         }
 
-        // ================= 3. دالة تسجيل الدخول =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
-            const rememberMe = document.getElementById('rememberMe')?.checked;
-
-            if (rememberMe) {
-                localStorage.setItem('saved_phone', phone);
-                localStorage.setItem('saved_password', password);
-            } else {
-                localStorage.removeItem('saved_phone');
-                localStorage.removeItem('saved_password');
-            }
 
             const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
@@ -497,286 +432,25 @@
             });
 
             if (error || !data || !data.id) {
-                showSystemAlert("خطأ في تسجيل الدخول", phone || "غير متوفر", "فشل التحقق", error?.message || "بيانات غير صحيحة");
+                showSystemAlert("خطأ في تسجيل الدخول", phone || "غير متوفر", "فشل التحقق", error?.message || data?.message || "بيانات غير صحيحة");
                 return;
             }
 
             currentUserId = data.id; 
 
-            // بدء تفعيل الـ Heartbeat فور تسجيل الدخول الناجح
             startHeartbeat();
-
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
         }
 
-        function loginAsVisitor() {
-            currentUserId = null;
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            renderMainDashboard();
-            loadDynamicMenuIntoSidebar();
-        }
-
-        // ================= 4. دالة جلب الأقسام =================
-        async function renderMainDashboard() {
-            const html = `
-                ${getHeaderTemplate()}
-
-                <div class="flex-1 overflow-y-auto space-y-4 px-1">
-                    <div class="mb-4">
-                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md">
-                    </div>
-
-                    <div id="partitionsContainer" class="space-y-3.5 pb-4">
-                        <div class="text-center text-gray-400 text-sm py-4">جاري تحميل الأقسام...</div>
-                    </div>
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-
-            try {
-                const { data, error } = await supabaseClient.rpc('get_partitions');
-
-                if (error) {
-                    showSystemAlert("فشل جلب الأقسام", currentUserId || "غير معروف", "قاعدة البيانات", error.message);
-                    document.getElementById('partitionsContainer').innerHTML = `<div class="text-center text-red-400 text-sm py-4">تعذر تحميل الأقسام</div>`;
-                    return;
-                }
-
-                let partitionsList = [];
-                if (Array.isArray(data)) {
-                    partitionsList = data;
-                } else if (typeof data === 'string') {
-                    try { partitionsList = JSON.parse(data); } catch(e){}
-                }
-
-                const container = document.getElementById('partitionsContainer');
-                if (container && partitionsList && partitionsList.length > 0) {
-                    let partitionsHtml = partitionsList.map(name => {
-                        let clickAction = "";
-                        if (name.includes('قطع الغيار') || name.includes('شراء')) {
-                            clickAction = "renderPartsScreen()";
-                        } else {
-                            clickAction = `alert('قسم ${name}')`;
-                        }
-
-                        return `
-                            <div onclick="${clickAction}" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                                <span class="font-bold text-lg sm:text-xl" dir="auto">${name}</span>
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            </div>
-                        `;
-                    }).join('');
-
-                    container.innerHTML = partitionsHtml;
-                } else {
-                    container.innerHTML = `<div class="text-center text-gray-400 text-sm py-4">لا توجد أقسام متاحة</div>`;
-                }
-            } catch (err) {
-                showSystemAlert("استثناء غير متوقع", currentUserId || "غير معروف", "تنفيذ JavaScript", err.message);
-            }
-        }
-
-        async function renderBrandsScreen() {
-            let brands = [];
-            const { data, error } = await supabaseClient.from('brands').select('*');
-            
-            if (!error && data) {
-                brands = data.map(item => item.brand_name || item.name || Object.values(item)[1]); 
-            } else if (error) {
-                showSystemAlert("فشل جلب الماركات", currentUserId || "غير معروف", "جدول brands", error.message);
-            }
-
-            let brandsHtml = "";
-            if (brands.length > 0) {
-                brandsHtml = brands.map((brand, index) => {
-                    const style = getRotatingCardStyle(index);
-                    return `
-                        <div onclick="renderModelsScreen('${brand}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <span class="font-bold text-gray-800" dir="auto">${brand}</span>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                brandsHtml = `<div class="text-center text-gray-500 py-6">لا توجد ماركات متاحة حالياً</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر الماركة</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${brandsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderModelsScreen(brand) {
-            selectedBrand = brand;
-            let tableName = "";
-            let nameColumn = "device_name";
-            let codeColumn = "model_code";
-            let compatColumn = "screen_compatibility";
-            let batteryColumn = "battery_model";
-            
-            const b = brand.toLowerCase();
-            if (b.includes('samsung')) {
-                tableName = 'samsung_models'; nameColumn = 'samsung_phone_name'; codeColumn = 'samsung_phone_code'; compatColumn = 'samsung_screen_compatibility'; batteryColumn = 'samsung_battery_model';
-            } else if (b.includes('iphone') || b.includes('apple')) {
-                tableName = 'apple_models'; nameColumn = 'apple_phone_name'; codeColumn = 'apple_phone_code'; compatColumn = 'apple_screen_compatibility'; batteryColumn = 'apple_battery_model';
-            } else if (b.includes('xiaomi') || b.includes('poco')) {
-                tableName = 'xiaomi_models'; nameColumn = 'xiaomi_phone_name'; codeColumn = 'xiaomi_phone_code'; compatColumn = 'xiaomi_screen_compatibility'; batteryColumn = 'xiaomi_battery_model';
-            } else if (b.includes('redmi')) {
-                tableName = 'redmi_models'; nameColumn = 'redmi_phone_name'; codeColumn = 'redmi_phone_code'; compatColumn = 'redmi_screen_compatibility'; batteryColumn = 'redmi_battery_model';
-            } else if (b.includes('huawei')) {
-                tableName = 'huawei_models'; nameColumn = 'huawei_phone_name'; codeColumn = 'huawei_phone_code'; compatColumn = 'huawei_screen_compatibility'; batteryColumn = 'huawei_battery_model';
-            } else if (b.includes('honor')) {
-                tableName = 'honor_models'; nameColumn = 'honor_phone_name'; codeColumn = 'honor_phone_code'; compatColumn = 'honor_screen_compatibility'; batteryColumn = 'honor_battery_model';
-            } else if (b.includes('oppo')) {
-                tableName = 'oppo_models'; nameColumn = 'oppo_phone_name'; codeColumn = 'oppo_phone_code'; compatColumn = 'oppo_screen_compatibility'; batteryColumn = 'oppo_battery_model';
-            } else if (b.includes('realme')) {
-                tableName = 'realme_models'; nameColumn = 'realme_phone_name'; codeColumn = 'realme_phone_code'; compatColumn = 'realme_screen_compatibility'; batteryColumn = 'realme_battery_model';
-            } else if (b.includes('itel')) {
-                tableName = 'itel_models'; nameColumn = 'itel_phone_name'; codeColumn = 'itel_phone_code'; compatColumn = 'itel_screen_compatibility'; batteryColumn = 'itel_battery_model';
-            } else if (b.includes('nokia')) {
-                tableName = 'nokia_models'; nameColumn = 'nokia_phone_name'; codeColumn = 'nokia_phone_code'; compatColumn = 'nokia_screen_compatibility'; batteryColumn = 'nokia_battery_model';
-            } else if (b.includes('vivo')) {
-                tableName = 'vivo_models'; nameColumn = 'vivo_phone_name'; codeColumn = 'vivo_phone_code'; compatColumn = 'vivo_screen_compatibility'; batteryColumn = 'vivo_battery_model';
-            } else if (b.includes('techno') || b.includes('tecno')) {
-                tableName = 'tecno_models'; nameColumn = 'tecno_phone_name'; codeColumn = 'tecno_phone_code'; compatColumn = 'tecno_screen_compatibility'; batteryColumn = 'tecno_battery_model';
-            } else if (b.includes('infinix')) {
-                tableName = 'infinix_models'; nameColumn = 'infinix_phone_name'; codeColumn = 'infinix_phone_code'; compatColumn = 'infinix_screen_compatibility'; batteryColumn = 'infinix_battery_model';
-            }
-
-            let models = [];
-            if (tableName) {
-                const { data, error } = await supabaseClient.from(tableName).select('*').order('id', { ascending: true });
-                if (!error && data) {
-                    models = data.map(item => ({
-                        device_name: item[nameColumn] || item['device_name'],
-                        model_code: item[codeColumn] || item['model_code'],
-                        screen_compatibility: item[compatColumn] || item['screen_compatibility'] || null,
-                        battery_model: item[batteryColumn] || item['battery_model'] || null
-                    }));
-                }
-            }
-
-            let modelsHtml = "";
-            if (models.length > 0) {
-                modelsHtml = models.map((m, index) => {
-                    const style = getRotatingCardStyle(index);
-                    const escapedCompat = m.screen_compatibility ? encodeURIComponent(m.screen_compatibility) : '';
-                    const escapedBattery = m.battery_model ? encodeURIComponent(m.battery_model) : '';
-                    const escapedCode = m.model_code ? encodeURIComponent(m.model_code) : '';
-                    return `
-                        <div onclick="renderPartsScreen('${m.device_name}', '${escapedCode}', '${escapedCompat}', '${escapedBattery}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <div class="text-right">
-                                <span class="font-bold text-gray-800 block" dir="auto">${m.device_name}</span>
-                                ${m.model_code ? `<span class="text-xs text-gray-500 block mt-0.5" dir="auto">الكود: ${m.model_code}</span>` : ''}
-                            </div>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                modelsHtml = `<div class="text-center text-gray-500 py-6">لا توجد موديلات متاحة</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر موديل (${brand})</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${modelsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        // ================= 5. دالة جلب قطع الغيار =================
-        async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
-            selectedModel = modelName;
-            selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
-            currentScreenCompatibility = screenCompat ? decodeURIComponent(screenCompat) : '';
-            currentBatteryModel = batteryModel ? decodeURIComponent(batteryModel) : '';
-
+        function renderMainDashboard() {
             document.getElementById('appContainer').innerHTML = `
                 ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
-                </div>
                 <div class="flex-1 flex items-center justify-center">
-                    <p class="text-gray-500 text-sm">جاري جلب قطع الغيار من قاعدة البيانات...</p>
+                    <p class="text-gray-600 font-bold text-lg">أهلاً بك في لوحة التحكم الرئيسية</p>
                 </div>
             `;
-
-            let sparePartsList = [];
-            try {
-                const { data, error } = await supabaseClient.rpc('get_spare_parts');
-
-                if (error) {
-                    showSystemAlert("فشل جلب قطع الغيار", currentUserId || "غير معروف", "دالة get_spare_parts", error.message);
-                } else if (data) {
-                    sparePartsList = data;
-                }
-            } catch (err) {
-                showSystemAlert("استثناء في جلب قطع الغيار", currentUserId || "غير معروف", "تنفيذ RPC", err.message);
-            }
-
-            let partsHtml = "";
-            if (sparePartsList.length > 0) {
-                partsHtml = sparePartsList.map((part, index) => {
-                    const style = getRotatingCardStyle(index);
-                    return `
-                        <div onclick="renderPartDetails('${part}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <span class="font-bold text-gray-800 text-right flex-1 ml-3" dir="auto">${part}</span>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                partsHtml = `<div class="text-center text-gray-500 py-6">لا توجد قطع غيار متاحة في الجدول حالياً</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${partsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
             loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderPartDetails(part) {
-            selectedPart = part;
-            alert(`تفاصيل القطعة: ${part}`);
         }
 
         window.onload = function() {
