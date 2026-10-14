@@ -112,7 +112,7 @@
 
         // ================= دالة حذف سجل الدخول الفعالة والمدعومة بالـ RPC =================
         async function handleDeleteLoginHistory() {
-            if (!confirm("هل أنت متكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) {
+            if (!confirm("هل أنت متأكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) {
                 return;
             }
 
@@ -526,7 +526,7 @@
             }
         }
 
-        // ================= 3. دالة تسجيل الدخول =================
+        // ================= 3. دالة تسجيل الدخول (مع إرسال نبضة فورية) =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
@@ -552,6 +552,15 @@
             }
 
             currentUserId = data.id; 
+
+            // إرسال النبضة فوراً لحظة الدخول دون انتظار 10 ثواني
+            try {
+                await supabaseClient.rpc('update_last_active_at', {
+                    target_user_id: currentUserId
+                });
+            } catch (err) {
+                console.error("Instant heartbeat error:", err);
+            }
 
             startHeartbeat();
 
