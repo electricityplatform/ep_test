@@ -66,7 +66,7 @@
 
                 try {
                     await supabaseClient.rpc('update_last_active_at', {
-                        p_user_id: currentUserId
+                        target_user_id: currentUserId
                     });
                 } catch (err) {
                     console.error("Heartbeat error:", err);
@@ -74,7 +74,7 @@
             }, 10000);
         }
 
-        // ================= دالة عرض المستخدمين النشطين (الرتبة، الاسم، الهاتف) =================
+        // ================= دالة عرض المستخدمين النشطين =================
         async function renderActiveUsersScreen() {
             toggleSidebar(); // قفل القائمة الجانبية عند الاختيار
 
@@ -97,10 +97,12 @@
             `;
 
             try {
-                const { data, error } = await supabaseClient.rpc('get_active_users_last_21_seconds');
+                const { data, error } = await supabaseClient.rpc('get_active_users', {
+                    p_user_id: currentUserId
+                });
 
                 if (error) {
-                    showSystemAlert("خطأ في جلب النشطين", currentUserId || "غير معروف", "get_active_users_last_21_seconds", error.message);
+                    showSystemAlert("خطأ في جلب النشطين", currentUserId || "غير معروف", "get_active_users", error.message);
                     return;
                 }
 
@@ -118,21 +120,21 @@
                             <table class="w-full text-right text-xs sm:text-sm">
                                 <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
                                     <tr>
-                                        <th class="p-3.5 font-bold">الاسم (${user_name || 'user_name'})</th>
-                                        <th class="p-3.5 font-bold">رقم الهاتف (${phone_number || 'phone_number'})</th>
-                                        <th class="p-3.5 font-bold">الرتبة (${user_role || 'user_role'})</th>
+                                        <th class="p-3.5 font-bold">الاسم</th>
+                                        <th class="p-3.5 font-bold">رقم الهاتف</th>
+                                        <th class="p-3.5 font-bold">الرتبة</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 bg-white">
                                     ${activeUsers.map(user => `
                                         <tr class="hover:bg-blue-50/50 transition-all">
-                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || user.name || 'بدون اسم'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || user.phone || '---'}</td>
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || 'بدون اسم'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
                                             <td class="p-3.5">
                                                 <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                    (user.user_role === 'admin' || user.role === 'admin') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                                    (user.user_role === 'admin' || user.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                                                 }" dir="auto">
-                                                    ${user.user_role || user.role || 'مستخدم'}
+                                                    ${user.user_role || 'مستخدم'}
                                                 </span>
                                             </td>
                                         </tr>
@@ -233,7 +235,7 @@
             `;
         }
 
-        // ================= 2. دالة جلب المنيو الرئيسية (عبر RPC المعتمدة) =================
+        // ================= 2. دالة جلب المنيو الرئيسية =================
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
@@ -261,7 +263,6 @@
                     sidebarContainer.innerHTML = menuItems.map(item => {
                         let clickAction = `alert('${item}')`;
                         
-                        // ربط زر "المستخدمون النشطون" بالدالة المخصصة لعرض الجدول
                         if (item.includes('المستخدمون النشطون')) {
                             clickAction = "renderActiveUsersScreen()";
                         }
@@ -346,7 +347,7 @@
             }
         }
 
-        // ================= 3. دالة تسجيل الدخول (عبر RPC المعتمدة) =================
+        // ================= 3. دالة تسجيل الدخول =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
@@ -387,7 +388,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        // ================= 4. دالة جلب الأقسام (عبر RPC المعتمدة) =================
+        // ================= 4. دالة جلب الأقسام =================
         async function renderMainDashboard() {
             const html = `
                 ${getHeaderTemplate()}
@@ -578,7 +579,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        // ================= 5. دالة جلب قطع الغيار (عبر RPC المعتمدة) =================
+        // ================= 5. دالة جلب قطع الغيار =================
         async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
             selectedModel = modelName;
             selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
