@@ -55,6 +55,47 @@
         let selectedModelCode = ""; 
         let currentScreenCompatibility = "";
         let currentBatteryModel = "";
+        let heartbeatInterval = null; // مؤشر الـ Heartbeat
+
+        // ================= 1.1 دالة تحديث النشاط (Heartbeat) =================
+        function startHeartbeat() {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+            heartbeatInterval = setInterval(async () => {
+                if (!currentUserId) return;
+
+                try {
+                    await supabaseClient.rpc('update_last_active_at', {
+                        p_user_id: currentUserId
+                    });
+                } catch (err) {
+                    console.error("Heartbeat error:", err);
+                }
+            }, 10000); // كل 10 ثوانٍ
+        }
+
+        // ================= 1.2 دالة جلب النشطين في آخر 21 ثانية (RPC الثانية) =================
+        async function fetchActiveUsers() {
+            try {
+                const { data, error } = await supabaseClient.rpc('get_active_users_last_21_seconds');
+
+                if (error) {
+                    showSystemAlert("خطأ في جلب النشطين", currentUserId || "غير معروف", "get_active_users_last_21_seconds", error.message);
+                    return;
+                }
+
+                let activeUsers = [];
+                if (Array.isArray(data)) {
+                    activeUsers = data;
+                } else if (typeof data === 'string') {
+                    try { activeUsers = JSON.parse(data); } catch(e){}
+                }
+
+                alert(`عدد المستخدمين المتصلين حالياً (آخر 21 ثانية): ${activeUsers.length}\n\n` + JSON.stringify(activeUsers, null, 2));
+            } catch (err) {
+                console.error("Active users RPC error:", err);
+            }
+        }
 
         function showSystemAlert(title, idStatus, menuStatus, errorDetails = "") {
             let message = `--- 🔍 تقرير حالة النظام والأخطاء ---\n\n`;
@@ -99,6 +140,11 @@
                         <button onclick="toggleSidebar()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm transition-all cursor-pointer">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
+                        </button>
+                        
+                        <button onclick="fetchActiveUsers()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm rounded-xl px-3 py-2.5 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                            <span class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></span>
+                            <span>المتصلين حالياً</span>
                         </button>
                     </div>
 
@@ -248,12 +294,16 @@
 
             currentUserId = data.id; 
 
+            // بدء تفعيل الـ Heartbeat فوراً عند تسجيل الدخول الناجح
+            startHeartbeat();
+
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
         }
 
         function loginAsVisitor() {
             currentUserId = null;
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
             renderMainDashboard();
             loadDynamicMenuIntoSidebar();
         }
