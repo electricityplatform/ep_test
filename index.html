@@ -74,9 +74,9 @@
             }, 10000);
         }
 
-        // ================= دالة عرض شاشة سجل تسجيل الدخول =================
+        // ================= دالة عرض شاشة سجل دخول المستخدمين (اللوجن هيستري) =================
         async function renderLoginHistoryScreen() {
-            toggleSidebar();
+            toggleSidebar(); // إغلاق القائمة الجانبية عند الضغط
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -106,7 +106,7 @@
             await fetchAndDisplayLoginHistory();
         }
 
-        // ================= دالة جلب وعرض سجل الدخول =================
+        // ================= دالة جلب وعرض سجل الدخول من الداتابيز =================
         async function fetchAndDisplayLoginHistory() {
             const tableContainer = document.getElementById('loginHistoryTableContainer');
             const titleElement = document.getElementById('loginHistoryTitle');
@@ -188,7 +188,7 @@
             }
         }
 
-        // ================= دالة عرض شاشة المستخدمين النشطين (الهيكل الأساسي) =================
+        // ================= دالة عرض شاشة المستخدمين النشطين =================
         async function renderActiveUsersScreen() {
             toggleSidebar();
 
@@ -343,7 +343,7 @@
             `;
         }
 
-        // ================= 2. دالة جلب المنيو الرئيسية (مطابقة صحيحة تماماً لنص سجل دخول المستخدمين) =================
+        // ================= 2. دالة جلب المنيو الرئيسية (مطابقة صحيحة تماماً لـ "سجل دخول المستخدمين") =================
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
@@ -373,7 +373,7 @@
                         
                         if (item.includes('المستخدمون النشطون')) {
                             clickAction = "renderActiveUsersScreen()";
-                        } else if (item.includes('سجل دخول المستخدمين') || item.includes('سجل الدخول')) {
+                        } else if (item.includes('سجل دخول المستخدمين')) {
                             clickAction = "renderLoginHistoryScreen()";
                         }
 
