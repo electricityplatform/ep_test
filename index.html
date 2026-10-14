@@ -55,9 +55,9 @@
         let selectedModelCode = ""; 
         let currentScreenCompatibility = "";
         let currentBatteryModel = "";
-        let heartbeatInterval = null; // مؤشر الـ Heartbeat
+        let heartbeatInterval = null;
 
-        // ================= 1.1 دالة تحديث النشاط (Heartbeat) =================
+        // ================= نظام الهيرت بيت (Heartbeat) =================
         function startHeartbeat() {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -71,11 +71,31 @@
                 } catch (err) {
                     console.error("Heartbeat error:", err);
                 }
-            }, 10000); // كل 10 ثوانٍ
+            }, 10000);
         }
 
-        // ================= 1.2 دالة جلب النشطين في آخر 21 ثانية (RPC الثانية) =================
-        async function fetchActiveUsers() {
+        // ================= دالة عرض المستخدمين النشطين (الرتبة، الاسم، الهاتف) =================
+        async function renderActiveUsersScreen() {
+            toggleSidebar(); // قفل القائمة الجانبية عند الاختيار
+
+            const container = document.getElementById('appContainer');
+            container.innerHTML = `
+                ${getHeaderTemplate()}
+                <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <span>رجوع</span>
+                    </button>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                        المستخدمون النشطون حالياً
+                    </h2>
+                </div>
+                <div class="flex-1 overflow-y-auto p-1">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب المستخدمين النشطين...</div>
+                </div>
+            `;
+
             try {
                 const { data, error } = await supabaseClient.rpc('get_active_users_last_21_seconds');
 
@@ -91,9 +111,64 @@
                     try { activeUsers = JSON.parse(data); } catch(e){}
                 }
 
-                alert(`عدد المستخدمين المتصلين حالياً (آخر 21 ثانية): ${activeUsers.length}\n\n` + JSON.stringify(activeUsers, null, 2));
+                let contentHtml = "";
+                if (activeUsers.length > 0) {
+                    contentHtml = `
+                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                            <table class="w-full text-right text-xs sm:text-sm">
+                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-3.5 font-bold">الاسم (${user_name || 'user_name'})</th>
+                                        <th class="p-3.5 font-bold">رقم الهاتف (${phone_number || 'phone_number'})</th>
+                                        <th class="p-3.5 font-bold">الرتبة (${user_role || 'user_role'})</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white">
+                                    ${activeUsers.map(user => `
+                                        <tr class="hover:bg-blue-50/50 transition-all">
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || user.name || 'بدون اسم'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || user.phone || '---'}</td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                    (user.user_role === 'admin' || user.role === 'admin') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                                }" dir="auto">
+                                                    ${user.user_role || user.role || 'مستخدم'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `
+                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                            <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <p class="font-semibold">لا يوجد مستخدمون نشطون في آخر 21 ثانية</p>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('appContainer').innerHTML = `
+                    ${getHeaderTemplate()}
+                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                        <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            <span>رجوع</span>
+                        </button>
+                        <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
+                            <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                            المستخدمون النشطون حالياً (${activeUsers.length})
+                        </h2>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-1">
+                        ${contentHtml}
+                    </div>
+                `;
+                loadDynamicMenuIntoSidebar();
             } catch (err) {
-                console.error("Active users RPC error:", err);
+                console.error("Error fetching active users:", err);
             }
         }
 
@@ -141,11 +216,6 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
-                        
-                        <button onclick="fetchActiveUsers()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm rounded-xl px-3 py-2.5 flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-                            <span class="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></span>
-                            <span>المتصلين حالياً</span>
-                        </button>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -188,12 +258,21 @@
                 }
 
                 if (menuItems && menuItems.length > 0) {
-                    sidebarContainer.innerHTML = menuItems.map(item => `
-                        <div onclick="alert('${item}')" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3 rounded-xl cursor-pointer transition-all text-sm font-semibold text-gray-800 flex items-center justify-between">
-                            <span dir="auto">${item}</span>
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `).join('');
+                    sidebarContainer.innerHTML = menuItems.map(item => {
+                        let clickAction = `alert('${item}')`;
+                        
+                        // ربط زر "المستخدمون النشطون" بالدالة المخصصة لعرض الجدول
+                        if (item.includes('المستخدمون النشطون')) {
+                            clickAction = "renderActiveUsersScreen()";
+                        }
+
+                        return `
+                            <div onclick="${clickAction}" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3 rounded-xl cursor-pointer transition-all text-sm font-semibold text-gray-800 flex items-center justify-between">
+                                <span dir="auto">${item}</span>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </div>
+                        `;
+                    }).join('');
                 } else {
                     sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">لا توجد عناصر متاحة</div>`;
                 }
@@ -294,7 +373,7 @@
 
             currentUserId = data.id; 
 
-            // بدء تفعيل الـ Heartbeat فوراً عند تسجيل الدخول الناجح
+            // بدء تفعيل الـ Heartbeat فور تسجيل الدخول الناجح
             startHeartbeat();
 
             renderMainDashboard();
