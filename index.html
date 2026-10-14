@@ -110,9 +110,32 @@
             await fetchAndDisplayLoginHistory();
         }
 
-        // ================= دالة مؤقتة لحذف السجل لحين إرسال اسم الـ RPC =================
+        // ================= دالة حذف سجل الدخول الفعالة والمدعومة بالـ RPC =================
         async function handleDeleteLoginHistory() {
-            alert("في انتظار اسم دالة الـ RPC الخاصة بحذف السجل لتفعيلها فوراً يا هندسة!");
+            if (!confirm("هل أنت متكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) {
+                return;
+            }
+
+            try {
+                const { data, error } = await supabaseClient.rpc('delete_login_history', {
+                    p_user_id: currentUserId
+                });
+
+                if (error) {
+                    alert("حدث خطأ أثناء الاتصال بقاعدة البيانات: " + error.message);
+                    return;
+                }
+
+                if (data && data.success) {
+                    alert(data.message || "تم تفريغ السجل بنجاح");
+                    await fetchAndDisplayLoginHistory(); // تحديث الجدول فوراً
+                } else {
+                    alert(data?.message || "عفواً، لا يمكنك تنفيذ هذا الإجراء");
+                }
+            } catch (err) {
+                console.error("Delete login history error:", err);
+                alert("حدث خطأ غير متوقع أثناء الحذف");
+            }
         }
 
         // ================= دالة جلب وعرض سجل الدخول بالتنسيق الجديد =================
@@ -670,7 +693,7 @@
             } else if (b.includes('oppo')) {
                 tableName = 'oppo_models'; nameColumn = 'oppo_phone_name'; codeColumn = 'oppo_phone_code'; compatColumn = 'oppo_screen_compatibility'; batteryColumn = 'oppo_battery_model';
             } else if (b.includes('realme')) {
-                tableName = 'realme_models'; nameColumn = 'realme_phone_name'; codeColumn = 'realme_screen_compatibility'; batteryColumn = 'realme_battery_model';
+                tableName = 'realme_models'; nameColumn = 'realme_phone_name'; compatColumn = 'realme_screen_compatibility'; batteryColumn = 'realme_battery_model';
             } else if (b.includes('itel')) {
                 tableName = 'itel_models'; nameColumn = 'itel_phone_name'; codeColumn = 'itel_phone_code'; compatColumn = 'itel_screen_compatibility'; batteryColumn = 'itel_battery_model';
             } else if (b.includes('nokia')) {
