@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electricity Aswan</title>
+    <title>Electricity</title>
     <!-- تضمين Tailwind CSS للتنسيق -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- تضمين مكتبة Supabase للاتصال بقاعدة البيانات -->
@@ -41,15 +41,13 @@
 
     </div>
 
-    <!-- كود الجافاسكريبت لإدارة النظام والصفحات والـ RPC -->
+    <!-- كود الجافاسكريبت لإدارة النظام والصفحات والـ RPC المحددة فقط -->
     <script>
         // ================= 1. المتغيرات وإعدادات الاتصال =================
         const SUPABASE_URL = 'https://glwwvrgvbfygqbmqlnfn.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_bCXPU0JSPeF-tG4OkHSXsQ_wyyRyC0w';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentUserRole = "زائر";
-        let currentUserType = "زائر";
         let currentUserId = null;
         let selectedBrand = "";
         let selectedModel = "";
@@ -57,51 +55,12 @@
         let selectedModelCode = ""; 
         let currentScreenCompatibility = "";
         let currentBatteryModel = "";
-        let currentUserDataGlobal = null; 
-
-        let heartbeatInterval = null;
-
-        function startUserHeartbeat(userId) {
-            if (!userId) return;
-            stopUserHeartbeat();
-
-            sendHeartbeat(userId);
-
-            heartbeatInterval = setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    sendHeartbeat(userId);
-                }
-            }, 10 * 1000);
-        }
-
-        async function sendHeartbeat(userId) {
-            try {
-                await supabaseClient.rpc('update_user_activity', {
-                    target_user_id: userId
-                });
-            } catch (err) {
-                console.error("خطأ في إرسال نبضة النشاط:", err);
-            }
-        }
-
-        function stopUserHeartbeat() {
-            if (heartbeatInterval) {
-                clearInterval(heartbeatInterval);
-                heartbeatInterval = null;
-            }
-        }
-
-        window.addEventListener('beforeunload', () => {
-            if (currentUserId) {
-                sendHeartbeat(currentUserId);
-            }
-        });
 
         function showSystemAlert(title, idStatus, menuStatus, errorDetails = "") {
-            let message = `--- 🔍 تقرير حالة النظام والتنبيهات ---\n\n`;
+            let message = `--- 🔍 تقرير حالة النظام والأخطاء ---\n\n`;
             message += `📌 الحدث: ${title}\n`;
             message += `🆔 حالة الـ ID: ${idStatus}\n`;
-            message += `📋 حالة جلب المنيو أو البيانات: ${menuStatus}\n`;
+            message += `📋 حالة جلب البيانات: ${menuStatus}\n`;
             if (errorDetails) {
                 message += `⚠ تفاصيل العطل / السبب: ${errorDetails}\n`;
             } else {
@@ -133,7 +92,7 @@
             return `
                 <div class="border-b border-gray-100 pb-4 mb-4 flex-shrink-0">
                     <div class="text-center mb-3">
-                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity Aswan</h1>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                     </div>
 
                     <div class="flex items-center justify-between mb-4">
@@ -141,10 +100,6 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
-
-                        <div class="bg-blue-50/60 border border-blue-100 px-3.5 py-2 rounded-xl text-blue-700 text-xs sm:text-sm font-semibold shadow-sm">
-                            ${currentUserRole}
-                        </div>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -162,6 +117,7 @@
             `;
         }
 
+        // ================= 2. دالة جلب المنيو الرئيسية (عبر RPC المعتمدة) =================
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
@@ -186,16 +142,12 @@
                 }
 
                 if (menuItems && menuItems.length > 0) {
-                    sidebarContainer.innerHTML = menuItems.map(item => {
-                        const title = item.menu_items || item.title || item || "عنصر القائمة";
-                        const action = item.action || title;
-                        return `
-                            <button onclick="toggleSidebar(); handleMenuAction('${action}', '${title}');" class="w-full text-right px-4 py-3 rounded-xl bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 font-semibold text-sm transition-all flex items-center gap-3">
-                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                <span>${title}</span>
-                            </button>
-                        `;
-                    }).join('');
+                    sidebarContainer.innerHTML = menuItems.map(item => `
+                        <div onclick="alert('${item}')" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3 rounded-xl cursor-pointer transition-all text-sm font-semibold text-gray-800 flex items-center justify-between">
+                            <span dir="auto">${item}</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </div>
+                    `).join('');
                 } else {
                     sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">لا توجد عناصر متاحة</div>`;
                 }
@@ -204,655 +156,21 @@
             }
         }
 
-        function handleMenuAction(actionName, title = "") {
-            const cleanAction = (actionName || "").trim();
-            const cleanTitle = (title || "").trim();
-
-            if (cleanAction.includes('البيانات الشخصية') || cleanTitle.includes('البيانات الشخصية') || cleanAction === 'renderUserProfile' || cleanAction === 'profile') {
-                renderUserProfileScreen();
-            } else if (cleanAction.includes('بيانات المستخدمين') || cleanTitle.includes('بيانات المستخدمين') || cleanAction === 'renderAllUsersScreen') {
-                renderAllUsersScreen();
-            } else if (cleanAction.includes('المستخدمون النشطون') || cleanTitle.includes('المستخدمون النشطون') || cleanAction === 'renderActiveUsersScreen') {
-                renderActiveUsersScreen();
-            } else if (cleanAction.includes('سجل تسجيل الدخول') || cleanTitle.includes('سجل تسجيل الدخول') || cleanAction === 'renderLoginHistoryScreen' || cleanAction.includes('سجل دخول المستخدمين')) {
-                renderLoginHistoryScreen();
-            } else if (typeof window[cleanAction] === 'function') {
-                window[cleanAction]();
-            } else {
-                alert(`تم اختيار العنصر (${cleanTitle || cleanAction})`);
-            }
-        }
-
-        async function renderActiveUsersScreen() {
-            if (!currentUserId) {
-                alert("يجب تسجيل الدخول أولاً!");
-                return;
-            }
-
-            document.getElementById('appContainer').innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard();" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    
-                    <div class="flex items-center gap-2">
-                        <button onclick="fetchAndUpdateActiveUsers(true)" id="manualRefreshBtn" class="bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm" title="تحديث القائمة">
-                            <svg id="refreshIcon" class="w-4 h-4 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>تحديث يدوي</span>
-                        </button>
-                        
-                        <div class="flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl">
-                            <span class="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
-                            <h2 id="activeUsersTitle" class="text-xs sm:text-sm font-bold text-gray-800">المستخدمون (...)</h2>
-                        </div>
-                    </div>
-                </div>
-                <div id="activeUsersTableContainer" class="flex-1 overflow-auto border border-gray-200 rounded-2xl shadow-sm">
-                    <div class="flex items-center justify-center h-full">
-                        <p class="text-gray-500 text-sm">جاري جلب المتصلين الآن...</p>
-                    </div>
-                </div>
-            `;
-            loadDynamicMenuIntoSidebar();
-
-            window.fetchAndUpdateActiveUsers = async function(isManual = false) {
-                if (isManual) {
-                    const icon = document.getElementById('refreshIcon');
-                    if (icon) icon.classList.add('rotate-180');
-                    setTimeout(() => {
-                        if (icon) icon.classList.remove('rotate-180');
-                    }, 500);
-                }
-
-                const { data: users, error } = await supabaseClient.rpc('get_active_users', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    console.error("خطأ في جلب المستخدمين النشطين:", error.message);
-                    return;
-                }
-
-                let rowsHtml = "";
-                if (users && users.length > 0) {
-                    rowsHtml = users.map((user, index) => `
-                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/50 transition-colors">
-                            <td class="px-4 py-3 text-xs sm:text-sm text-indigo-600 font-bold whitespace-nowrap">${user.user_role || 'مستخدم'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-800 font-bold whitespace-nowrap">${user.user_name || 'بدون اسم'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">${user.shop_name || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600">${user.shop_address || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${user.shop_scope || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${user.shop_city || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-blue-600 font-semibold whitespace-nowrap" dir="ltr">${user.phone_number || ''}</td>
-                        </tr>
-                    `).join('');
-                } else {
-                    rowsHtml = `<tr><td colspan="7" class="text-center text-gray-400 py-6 text-sm">لا توجد نشاطات حالية</td></tr>`;
-                }
-
-                const titleEl = document.getElementById('activeUsersTitle');
-                if (titleEl) {
-                    titleEl.innerText = `المستخدمون النشطون (${users ? users.length : 0})`;
-                }
-
-                const tableContainerEl = document.getElementById('activeUsersTableContainer');
-                if (tableContainerEl) {
-                    tableContainerEl.innerHTML = `
-                        <table class="w-full text-right border-collapse">
-                            <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
-                                <tr>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الرتبة</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الاسم</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">اسم المحل</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">عنوان المحل</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">نطاق المحل</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">المحافظة</th>
-                                    <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">رقم الهاتف</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
-                    `;
-                }
-            };
-
-            await fetchAndUpdateActiveUsers(false);
-        }
-
-        async function renderLoginHistoryScreen() {
-            if (!currentUserId) {
-                alert("❌ خطأ: لم يتم جلب الـ ID.");
-                return;
-            }
-
-            document.getElementById('appContainer').innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">سجل تسجيل الدخول</h2>
-                </div>
-                <div class="flex-1 flex items-center justify-center">
-                    <p class="text-gray-500 text-sm">جاري التحقق من الصلاحيات وجلب سجلات الدخول...</p>
-                </div>
-            `;
-            loadDynamicMenuIntoSidebar();
-
-            const { data: response, error } = await supabaseClient.rpc('get_login_history_data', {
-                p_user_id: currentUserId
-            });
-
-            if (error) {
-                alert(`❌ خطأ في الاتصال بقاعدة البيانات: ${error.message}`);
-                renderMainDashboard();
-                return;
-            }
-
-            if (!response || response.success === false) {
-                alert(`⛔ تم رفض صلاحية عرض سجل الدخول بواسطة قاعدة البيانات!`);
-                renderMainDashboard();
-                return;
-            }
-
-            const historyData = response.data || [];
-
-            let rowsHtml = "";
-            if (historyData.length > 0) {
-                rowsHtml = historyData.map((item, index) => {
-                    let rawDate = item.login_time || item.last_login || item.created_at || '';
-                    let formattedTime = rawDate ? rawDate.replace('T', ' ') : 'غير متوفر';
-
-                    return `
-                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/50 transition-colors">
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap" dir="ltr">${formattedTime}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-indigo-600 font-bold whitespace-nowrap">${item.user_role || 'غير محدد'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-800 font-bold whitespace-nowrap">${item.user_name || item.name || 'بدون اسم'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">${item.shop_name || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${item.shop_address || item.address || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${item.shop_scope || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${item.shop_city || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-blue-600 font-semibold whitespace-nowrap" dir="ltr">${item.phone_number || ''}</td>
-                        </tr>
-                    `;
-                }).join('');
-            } else {
-                rowsHtml = `<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">لا توجد سجلات متاحة حالياً</td></tr>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <div class="flex items-center gap-2">
-                        <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            <span>رجوع</span>
-                        </button>
-                        <button onclick="handleDeleteLoginHistory()" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            <span>حذف السجل</span>
-                        </button>
-                    </div>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">سجل تسجيل الدخول</h2>
-                </div>
-                <div class="flex-1 overflow-auto border border-gray-200 rounded-2xl shadow-sm">
-                    <table class="w-full text-right border-collapse">
-                        <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
-                            <tr>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">اخر دخول</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الرتبة</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الاسم</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">اسم المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">عنوان المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">نطاق المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">المحافظة</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">رقم الهاتف</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function handleDeleteLoginHistory() {
-            if (!currentUserId) {
-                alert("يجب تسجيل الدخول أولاً!");
-                return;
-            }
-
-            const confirmDel = confirm("هل أنت متأكد من رغبتك في حذف سجل تسجيل الدخول بالكامل؟");
-            if (!confirmDel) return;
-
-            try {
-                const { data, error } = await supabaseClient.rpc('delete_login_history', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    alert("⚠ خطأ: " + error.message);
-                    return;
-                }
-
-                if (data && data.success === false) {
-                    alert(data.message || "تعذر حذف السجل");
-                } else {
-                    alert("✅ تم حذف سجل تسجيل الدخول بنجاح!");
-                    renderLoginHistoryScreen();
-                }
-            } catch (err) {
-                alert("حدث خطأ استثنائي: " + err.message);
-            }
-        }
-
-        async function changeUserRole(targetUserId, newRole) {
-            if (!currentUserId) {
-                alert("يجب تسجيل الدخول أولاً!");
-                return;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.rpc('update_user_role', {
-                    p_caller_id: currentUserId,
-                    target_user_id: targetUserId,
-                    new_role: newRole
-                });
-
-                if (error) {
-                    alert("خطأ في الاتصال: " + error.message);
-                    return;
-                }
-
-                if (data && data.success) {
-                    alert("✅ " + data.message);
-                } else {
-                    alert("⚠ " + (data?.message || "فشل تحديث الصلاحية"));
-                    renderAllUsersScreen(); 
-                }
-            } catch (err) {
-                alert("حدث خطأ استثنائي: " + err.message);
-            }
-        }
-
-        async function renderAllUsersScreen() {
-            if (!currentUserId) {
-                alert(`❌ خطأ: لم يتم جلب الـ ID!`);
-                return;
-            }
-
-            document.getElementById('appContainer').innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة بيانات المستخدمين</h2>
-                </div>
-                <div class="flex-1 flex items-center justify-center">
-                    <p class="text-gray-500 text-sm">جاري التحقق من الصلاحيات وجلب البيانات...</p>
-                </div>
-            `;
-            loadDynamicMenuIntoSidebar();
-
-            const { data: response, error } = await supabaseClient.rpc('get_all_users_data', {
-                p_user_id: currentUserId
-            });
-
-            if (error) {
-                alert(`❌ خطأ في الاتصال بقاعدة البيانات: ${error.message}`);
-                renderMainDashboard();
-                return;
-            }
-
-            if (!response || response.success === false) {
-                alert(`⛔ تم رفض الصلاحية من قاعدة البيانات!`);
-                renderMainDashboard();
-                return;
-            }
-
-            const allUsers = response.data || [];
-            
-            const isCurrentAdmin = (currentUserType && currentUserType.toLowerCase() === 'admin') || (currentUserRole && currentUserRole.toLowerCase() === 'admin');
-            const isCurrentHead = (currentUserType && (currentUserType.toLowerCase() === 'head' || currentUserType.toLowerCase() === 'مدير')) || (currentUserRole && (currentUserRole.toLowerCase() === 'head' || currentUserRole.toLowerCase() === 'مدير'));
-            const canModifyRoles = isCurrentAdmin || isCurrentHead;
-
-            let rowsHtml = "";
-            if (allUsers.length > 0) {
-                rowsHtml = allUsers.map((user, index) => {
-                    let role = (user.user_role || '').toLowerCase();
-                    
-                    let roleCellHtml = "";
-                    if (canModifyRoles) {
-                        roleCellHtml = `
-                            <select onchange="changeUserRole('${user.id}', this.value)" class="bg-gray-50 border border-gray-200 text-indigo-600 font-bold rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                ${isCurrentAdmin ? `<option value="admin" ${role === 'admin' ? 'selected' : ''}>admin</option>` : ''}
-                                <option value="head" ${role === 'head' || role === 'مدير' ? 'selected' : ''}>head</option>
-                                <option value="rep" ${role === 'rep' ? 'selected' : ''}>rep</option>
-                                <option value="seller" ${role === 'seller' ? 'selected' : ''}>seller</option>
-                                <option value="tech" ${role === 'tech' ? 'selected' : ''}>tech</option>
-                                <option value="person" ${role === 'person' ? 'selected' : ''}>person</option>
-                                <option value="user" ${role === 'user' ? 'selected' : ''}>user</option>
-                            </select>
-                        `;
-                    } else {
-                        roleCellHtml = `<span class="text-indigo-600 font-bold">${user.user_role || 'مستخدم'}</span>`;
-                    }
-
-                    return `
-                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/50 transition-colors">
-                            <td class="px-4 py-3 text-xs sm:text-sm whitespace-nowrap">
-                                ${roleCellHtml}
-                            </td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-800 font-bold whitespace-nowrap">${user.user_name || 'بدون اسم'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">${user.shop_name || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600">${user.shop_address || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${user.shop_scope || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-600 whitespace-nowrap">${user.shop_city || 'غير متوفر'}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-blue-600 font-semibold whitespace-nowrap" dir="ltr">${user.phone_number || ''}</td>
-                            <td class="px-4 py-3 text-xs sm:text-sm text-gray-700 font-semibold whitespace-nowrap" dir="ltr">${user.password || user.pass || 'غير مسموح'}</td>
-                        </tr>
-                    `;
-                }).join('');
-            } else {
-                rowsHtml = `<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">لا يوجد مستخدمين مسجلين حالياً</td></tr>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة بيانات المستخدمين</h2>
-                </div>
-                <div class="flex-1 overflow-auto border border-gray-200 rounded-2xl shadow-sm">
-                    <table class="w-full text-right border-collapse">
-                        <thead class="bg-gray-100 sticky top-0 z-10 border-b border-gray-200">
-                            <tr>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الرتبة</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">الاسم</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">اسم المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">عنوان المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">نطاق المحل</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">المحافظة</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">رقم الهاتف</th>
-                                <th class="px-4 py-3 text-xs sm:text-sm font-bold text-gray-700 whitespace-nowrap">رمز المرور</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200">
-                            ${rowsHtml}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderUserProfileScreen() {
-            if (!currentUserId && currentUserRole === "زائر") {
-                alert("❌ خطأ: الحساب الحالي زائر.");
-                return;
-            }
-
-            const htmlLoading = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">البيانات الشخصية</h2>
-                </div>
-                <div class="flex-1 flex items-center justify-center">
-                    <p class="text-gray-500 text-sm">جاري جلب البيانات الشخصية...</p>
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = htmlLoading;
-            loadDynamicMenuIntoSidebar();
-
-            try {
-                let userData = null;
-
-                if (currentUserId) {
-                    const { data: rpcData, error: rpcError } = await supabaseClient.rpc('get_user_profile', { 
-                        user_id: currentUserId 
-                    });
-
-                    if (!rpcError && rpcData) {
-                        userData = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-                    }
-                }
-
-                currentUserDataGlobal = userData; 
-
-                const name = userData?.user_name || userData?.name || "غير متوفر";
-                const shopName = userData?.shop_name || "غير متوفر";
-                const shopAddress = userData?.shop_address || "غير متوفر";
-                const shopScope = userData?.shop_scope || "غير متوفر";
-                const shopCity = userData?.shop_city || "غير متوفر";
-                const phone = userData?.phone_number || currentUserRole;
-                const password = userData?.password || userData?.pass || "********";
-
-                const htmlContent = `
-                    ${getHeaderTemplate()}
-                    <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                        <div class="flex items-center gap-2">
-                            <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                                <span>رجوع</span>
-                            </button>
-                            <button onclick="renderEditProfileScreen()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm">
-                                تعديل البيانات
-                            </button>
-                        </div>
-                        <h2 class="text-sm sm:text-base font-bold text-gray-800">البيانات الشخصية</h2>
-                    </div>
-                    <div class="flex-1 overflow-y-auto space-y-4 p-2 max-w-xl mx-auto w-full">
-                        <div class="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm space-y-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">الاسم</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm">${name}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">اسم المحل</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm">${shopName}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">عنوان المحل</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm">${shopAddress}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">نطاق المحل</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm">${shopScope}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">المحافظة</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm">${shopCity}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">رقم الهاتف</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm" dir="ltr">${phone}</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-500 mb-1">رمز المرور</label>
-                                <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm" dir="ltr">${password}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('appContainer').innerHTML = htmlContent;
-                loadDynamicMenuIntoSidebar();
-
-            } catch (err) {
-                alert(`❌ خطأ: ${err.message}`);
-            }
-        }
-
-        function renderEditProfileScreen() {
-            if (!currentUserId) {
-                alert("يجب تسجيل الدخول أولاً!");
-                return;
-            }
-
-            const uData = currentUserDataGlobal || {};
-            const currentCity = uData.shop_city || '';
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderUserProfileScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">تعديل البيانات الشخصية</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-4 p-2 max-w-xl mx-auto w-full">
-                    <form onsubmit="handleUpdateProfile(event)" class="bg-white border border-gray-200 p-5 rounded-2xl shadow-sm space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">الاسم</label>
-                            <input type="text" id="editUserName" value="${uData.user_name || uData.name || ''}" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">اسم المحل</label>
-                            <input type="text" id="editShopName" value="${uData.shop_name || ''}" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">عنوان المحل</label>
-                            <input type="text" id="editShopAddress" value="${uData.shop_address || ''}" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">نطاق المحل</label>
-                            <input type="text" id="editShopScope" value="${uData.shop_scope || ''}" class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">المحافظة</label>
-                            <select id="editShopCity" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="" disabled ${!currentCity ? 'selected' : ''}>اختر المحافظة</option>
-                                <option value="أسوان" ${currentCity === 'أسوان' ? 'selected' : ''}>أسوان</option>
-                                <option value="الأقصر" ${currentCity === 'الأقصر' ? 'selected' : ''}>الأقصر</option>
-                                <option value="قنا" ${currentCity === 'قنا' ? 'selected' : ''}>قنا</option>
-                                <option value="سوهاج" ${currentCity === 'سوهاج' ? 'selected' : ''}>سوهاج</option>
-                                <option value="أسيوط" ${currentCity === 'أسيوط' ? 'selected' : ''}>أسيوط</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">رقم الهاتف</label>
-                            <input type="text" id="editPhone" value="${uData.phone_number || ''}" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" dir="ltr">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-500 mb-1">رمز المرور</label>
-                            <input type="text" id="editPassword" value="${uData.password || uData.pass || ''}" required class="w-full bg-gray-50 border border-gray-200 text-gray-800 font-semibold px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" dir="ltr">
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">
-                            حفظ التعديلات
-                        </button>
-                    </form>
-
-                    <button type="button" onclick="handleDeleteAccount()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm mt-4">
-                        حذف الحساب نهائياً
-                    </button>
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function handleUpdateProfile(e) {
-            e.preventDefault();
-            
-            const userNameValue = document.getElementById('editUserName').value.trim();
-            const shopNameValue = document.getElementById('editShopName').value.trim();
-            const addressValue = document.getElementById('editShopAddress').value.trim();
-            const areaValue = document.getElementById('editShopScope').value.trim(); 
-            const cityValue = document.getElementById('editShopCity').value.trim();
-            const phoneValue = document.getElementById('editPhone').value.trim();
-            const passwordValue = document.getElementById('editPassword').value.trim();
-
-            const { data, error } = await supabaseClient.rpc('update_user_profile', {
-                p_password: passwordValue,
-                p_phone_number: phoneValue,
-                p_shop_address: addressValue,
-                p_shop_area: areaValue, 
-                p_shop_city: cityValue,
-                p_shop_name: shopNameValue,
-                p_user_id: currentUserId,
-                p_user_name: userNameValue
-            });
-
-            if (error) {
-                alert(`❌ خطأ: ${error.message}`);
-                return;
-            }
-
-            if (data && data.success) {
-                alert('✅ ' + data.message);
-                renderUserProfileScreen(); 
-            } else {
-                alert('⚠ ' + (data?.message || 'تعذر حفظ التعديلات'));
-            }
-        }
-
-        async function handleDeleteAccount() {
-            if (!currentUserId) return;
-            const confirmDelete = confirm("هل أنت متأكد من رغبتك في حذف حسابك نهائياً؟");
-            if (!confirmDelete) return;
-
-            try {
-                const { data, error } = await supabaseClient.rpc('delete_user_profile', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    alert("خطأ: " + error.message);
-                    return;
-                }
-
-                if (data && data.success) {
-                    alert(data.message);
-                    loginAsVisitor();
-                    renderLoginScreen();
-                } else {
-                    alert(data?.message || "تعذر حذف الحساب");
-                }
-            } catch (err) {
-                alert("خطأ: " + err.message);
-            }
-        }
-
         function renderLoginScreen() {
-            stopUserHeartbeat();
             const html = `
                 <div class="flex-1 overflow-y-auto px-2">
                     <div class="max-w-xl mx-auto w-full py-4">
                         <div class="text-center mb-6">
-                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity Aswan</h1>
+                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                         </div>
 
                         <div class="mb-6">
                             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-40 sm:h-52 object-cover rounded-2xl shadow-md">
                         </div>
 
-                        <div class="grid grid-cols-2 gap-2 bg-gray-100 p-1.5 rounded-2xl mb-6">
-                            <button onclick="switchTab('login')" id="loginTabBtn" class="py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 bg-white text-blue-600 shadow-sm">
-                                تسجيل الدخول
-                            </button>
-                            <button onclick="switchTab('register')" id="registerTabBtn" class="py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-700">
-                                إنشاء حساب
-                            </button>
+                        <div class="bg-gray-100 p-1.5 rounded-2xl flex items-center mb-6 border border-gray-200">
+                            <button class="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl shadow-sm text-sm transition-all">تسجيل الدخول</button>
+                            <button onclick="alert('شاشة إنشاء حساب')" class="flex-1 text-gray-500 font-semibold py-2.5 rounded-xl text-sm transition-all hover:text-gray-700">إنشاء حساب</button>
                         </div>
 
                         <div id="loginFormContainer">
@@ -877,45 +195,6 @@
                             </form>
                         </div>
 
-                        <div id="registerFormContainer" class="hidden">
-                            <form onsubmit="handleRegisterSubmit(event)" class="space-y-3.5">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
-                                    <input type="text" id="regUserName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">اسم المحل</label>
-                                    <input type="text" id="regShopName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">عنوان المحل</label>
-                                    <input type="text" id="regShopAddress" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">المحافظة</label>
-                                    <select id="regShopCity" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-gray-700">
-                                        <option value="" disabled selected>اختر المحافظة</option>
-                                        <option value="أسوان">أسوان</option>
-                                        <option value="الأقصر">الأقصر</option>
-                                        <option value="قنا">قنا</option>
-                                        <option value="سوهاج">سوهاج</option>
-                                        <option value="أسيوط">أسيوط</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
-                                    <input type="text" id="regPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
-                                    <input type="password" id="regPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
-                                </div>
-                                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm mt-2">
-                                    إنشاء الحساب
-                                </button>
-                            </form>
-                        </div>
-
                         <div class="relative my-6">
                             <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
                             <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
@@ -930,7 +209,7 @@
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
-            
+
             if (localStorage.getItem('saved_phone')) {
                 const phoneInput = document.getElementById('loginPhone');
                 const passInput = document.getElementById('loginPassword');
@@ -942,25 +221,7 @@
             }
         }
 
-        function switchTab(tab) {
-            const loginForm = document.getElementById('loginFormContainer');
-            const registerForm = document.getElementById('registerFormContainer');
-            const loginTabBtn = document.getElementById('loginTabBtn');
-            const registerTabBtn = document.getElementById('registerTabBtn');
-
-            if (tab === 'login') {
-                loginForm.classList.remove('hidden');
-                registerForm.classList.add('hidden');
-                loginTabBtn.className = "py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 bg-white text-blue-600 shadow-sm";
-                registerTabBtn.className = "py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-700";
-            } else {
-                loginForm.classList.add('hidden');
-                registerForm.classList.remove('hidden');
-                registerTabBtn.className = "py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 bg-white text-emerald-600 shadow-sm";
-                loginTabBtn.className = "py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 text-gray-500 hover:text-gray-700";
-            }
-        }
-
+        // ================= 3. دالة تسجيل الدخول (عبر RPC المعتمدة) =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
@@ -975,7 +236,6 @@
                 localStorage.removeItem('saved_password');
             }
 
-            // استخدام دالة الـ login الآمنة بالـ JSONB
             const { data, error } = await supabaseClient.rpc('login', { 
                 p_phone_number: phone, 
                 p_password: password 
@@ -987,70 +247,18 @@
             }
 
             currentUserId = data.id; 
-            currentUserRole = phone;
-            currentUserType = "head"; 
-            
-            startUserHeartbeat(currentUserId);
 
             renderMainDashboard();
             loadDynamicMenuIntoSidebar(); 
         }
 
-        async function handleRegisterSubmit(e) {
-            e.preventDefault();
-            const user_name = document.getElementById('regUserName').value.trim();
-            const shop_name = document.getElementById('regShopName').value.trim();
-            const shop_address = document.getElementById('regShopAddress').value.trim();
-            const shop_city = document.getElementById('regShopCity').value.trim();
-            const phone_number = document.getElementById('regPhone').value.trim();
-            const password = document.getElementById('regPassword').value.trim();
-
-            const { data, error } = await supabaseClient.rpc('register_user', { 
-                p_user_name: user_name, 
-                p_shop_name: shop_name, 
-                p_shop_address: shop_address, 
-                p_shop_city: shop_city,
-                p_phone_number: phone_number, 
-                p_password: password 
-            });
-
-            if (error) {
-                alert(`❌ خطأ: ${error.message}`);
-                return;
-            }
-
-            let resObj = data;
-            if (Array.isArray(data)) {
-                resObj = data[0];
-            }
-
-            if (resObj && resObj.success === false) {
-                alert(`⚠ ${resObj.message || 'رفض إنشاء الحساب'}`);
-                return;
-            }
-
-            alert('✅ تم إنشاء الحساب وتسجيل الدخول بنجاح!');
-            currentUserRole = phone_number;
-            currentUserType = "head"; 
-            currentUserId = resObj?.user?.id || resObj?.id || resObj?.user_id || resObj?.ID || resObj?.uuid || null;
-            
-            if (currentUserId) {
-                startUserHeartbeat(currentUserId);
-            }
-
-            renderMainDashboard();
-            loadDynamicMenuIntoSidebar();
-        }
-
         function loginAsVisitor() {
-            stopUserHeartbeat();
-            currentUserRole = "زائر";
-            currentUserType = "زائر";
             currentUserId = null;
             renderMainDashboard();
             loadDynamicMenuIntoSidebar();
         }
 
+        // ================= 4. دالة جلب الأقسام (عبر RPC المعتمدة) =================
         async function renderMainDashboard() {
             const html = `
                 ${getHeaderTemplate()}
@@ -1079,7 +287,7 @@
 
                 let partitionsList = [];
                 if (Array.isArray(data)) {
-                    partitionsList = data.map(item => typeof item === 'object' ? (item.partition_name || item.partition_names || Object.values(item)[0]) : item);
+                    partitionsList = data;
                 } else if (typeof data === 'string') {
                     try { partitionsList = JSON.parse(data); } catch(e){}
                 }
@@ -1088,8 +296,8 @@
                 if (container && partitionsList && partitionsList.length > 0) {
                     let partitionsHtml = partitionsList.map(name => {
                         let clickAction = "";
-                        if (name.includes('قطع الغيار') || name.includes('شراء') || name.includes('الماركات')) {
-                            clickAction = "renderBrandsScreen()";
+                        if (name.includes('قطع الغيار') || name.includes('شراء')) {
+                            clickAction = "renderPartsScreen()";
                         } else {
                             clickAction = `alert('قسم ${name}')`;
                         }
@@ -1241,6 +449,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
+        // ================= 5. دالة جلب قطع الغيار (عبر RPC المعتمدة) =================
         async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
             selectedModel = modelName;
             selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
@@ -1250,7 +459,7 @@
             document.getElementById('appContainer').innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderModelsScreen('${selectedBrand}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -1292,7 +501,7 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderModelsScreen('${selectedBrand}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -1369,11 +578,11 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderPartsScreen('${selectedModel}', '${encodeURIComponent(selectedModelCode)}', '${encodeURIComponent(currentScreenCompatibility)}', '${encodeURIComponent(currentBatteryModel)}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderPartsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800" dir="auto">${selectedModel} - ${part}</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800" dir="auto">${part}</h2>
                 </div>
                 <div class="flex-1 overflow-y-auto space-y-3 p-1">
                     ${dynamicSectionsHtml}
