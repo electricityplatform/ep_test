@@ -74,6 +74,174 @@
             }, 10000);
         }
 
+        // ================= دالة عرض شاشة تسجيل مندوب جديد =================
+        async function renderRegisterRepresentativeScreen() {
+            toggleSidebar();
+
+            const container = document.getElementById('appContainer');
+            
+            const egyptianGovernorates = [
+                "أسوان", "الأقصر", "قنا", "البحر الأحمر", "الوادي الجديد", "سوهاج", "أسيوط", 
+                "المنيا", "بني سويف", "الجيزة", "القاهرة", "سيناء", "بورسعيد", "كفر الشيخ", 
+                "دمياط", "الدقهلية", "الشرقية", "الغربية", "المنوفية", "الفيوم", "بحيرة", 
+                "الإسكندرية", "مطروح"
+            ];
+
+            container.innerHTML = `
+                ${getHeaderTemplate()}
+                <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                    <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        <span>رجوع</span>
+                    </button>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                        تسجيل مندوب جديد
+                    </h2>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-2">
+                    <form onsubmit="handleRegisterRepresentative(event)" class="space-y-4 max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                        
+                        <!-- الرتبة (تلقائي مندوب) -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">الرتبة (تلقائي)</label>
+                            <input type="text" value="مندوب" disabled class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 text-sm font-bold" dir="auto">
+                        </div>
+
+                        <!-- الاسم -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
+                            <input type="text" id="repName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="auto" placeholder="ادخل اسم المندوب">
+                        </div>
+
+                        <!-- المحافظة -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">المحافظة</label>
+                            <select id="repCity" onchange="updateRegionsList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                                <option value="">اختر المحافظة...</option>
+                                ${egyptianGovernorates.map(gov => `<option value="${gov}">${gov}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <!-- منطقة التوصيل -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">منطقة التوصيل</label>
+                            <select id="repRegion" onchange="updateAreasList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                                <option value="">اختر المحافظة أولاً...</option>
+                            </select>
+                        </div>
+
+                        <!-- نطاق التوصيل -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">نطاق التوصيل</label>
+                            <select id="repArea" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                                <option value="">اختر منطقة التوصيل أولاً...</option>
+                            </select>
+                        </div>
+
+                        <!-- رقم الهاتف -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
+                            <input type="text" id="repPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
+                        </div>
+
+                        <!-- رقم الواتساب -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الواتساب</label>
+                            <input type="text" id="repWhatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
+                        </div>
+
+                        <!-- البريد الإلكتروني -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">البريد الإلكترونى</label>
+                            <input type="email" id="repGmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="example@gmail.com">
+                        </div>
+
+                        <!-- رمز المرور -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
+                            <input type="password" id="repPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="••••••••">
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm cursor-pointer">
+                            حفظ وتسجيل المندوب
+                        </button>
+                    </form>
+                </div>
+            `;
+
+            loadDynamicMenuIntoSidebar();
+        }
+
+        // تحديث مناطق التوصيل بناءً على المحافظة المختارة
+        function updateRegionsList() {
+            const city = document.getElementById('repCity').value;
+            const regionSelect = document.getElementById('repRegion');
+            const areaSelect = document.getElementById('repArea');
+            
+            regionSelect.innerHTML = '<option value="">اختر منطقة التوصيل...</option>';
+            areaSelect.innerHTML = '<option value="">اختر نطاق التوصيل أولاً...</option>';
+
+            if (city === 'أسوان') {
+                ['إدفو', 'كوم أمبو', 'دراو', 'مركز أسوان'].forEach(r => {
+                    regionSelect.innerHTML += `<option value="${r}">${r}</option>`;
+                });
+            } else if (city) {
+                regionSelect.innerHTML += `<option value="${city} - عام">${city} - عام</option>`;
+            }
+        }
+
+        // تحديث نطاق التوصيل بناءً على المنطقة المختارة
+        function updateAreasList() {
+            const region = document.getElementById('repRegion').value;
+            const areaSelect = document.getElementById('repArea');
+            
+            areaSelect.innerHTML = '<option value="">اختر النطاق...</option>';
+
+            if (region === 'مركز أسوان') {
+                ['السيل', 'الطابية', 'النفق', 'التأمين'].forEach(a => {
+                    areaSelect.innerHTML += `<option value="${a}">${a}</option>`;
+                });
+            } else if (region) {
+                areaSelect.innerHTML += `<option value="عام">عام</option>`;
+            }
+        }
+
+        // إرسال البيانات لدالة الـ RPC الخاصة بتسجيل المندوب
+        async function handleRegisterRepresentative(e) {
+            e.preventDefault();
+
+            try {
+                const { data, error } = await supabaseClient.rpc('register_representative', {
+                    p_admin_user_id: currentUserId,
+                    p_user_name: document.getElementById('repName').value.trim(),
+                    p_delivery_city: document.getElementById('repCity').value,
+                    p_delivery_region: document.getElementById('repRegion').value,
+                    p_delivery_area: document.getElementById('repArea').value,
+                    p_phone_number: document.getElementById('repPhone').value.trim(),
+                    p_whatsapp_number: document.getElementById('repWhatsapp').value.trim(),
+                    p_gmail: document.getElementById('repGmail').value.trim(),
+                    p_password: document.getElementById('repPassword').value.trim()
+                });
+
+                if (error) {
+                    alert("خطأ: " + error.message);
+                    return;
+                }
+
+                if (data && data.success) {
+                    alert(data.message || "تم تسجيل المندوب بنجاح");
+                    renderMainDashboard();
+                } else {
+                    alert(data?.message || "عفواً، لا تملك الصلاحية لتنفيذ هذا الإجراء");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("حدث خطأ غير متوقع أثناء التسجيل");
+            }
+        }
+
         // ================= دالة عرض شاشة بيانات المستخدمين =================
         async function renderUserProfileMenuScreen() {
             toggleSidebar();
@@ -106,7 +274,6 @@
             await fetchAndDisplayUserProfileMenu();
         }
 
-        // ================= دالة جلب وعرض قائمة بيانات المستخدمين =================
         async function fetchAndDisplayUserProfileMenu() {
             const menuContainer = document.getElementById('userProfileMenuContainer');
             if (!menuContainer) return;
@@ -124,7 +291,6 @@
                     return;
                 }
 
-                // التعامل مع الرد سواء كان مصفوفة أو كائن خطأ مرتبج
                 if (data && data.success === false) {
                     menuContainer.innerHTML = `
                         <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
@@ -203,7 +369,6 @@
             await fetchAndDisplayLoginHistory();
         }
 
-        // ================= دالة حذف سجل الدخول الفعالة والمدعومة بالـ RPC =================
         async function handleDeleteLoginHistory() {
             if (!confirm("هل أنت متأكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) {
                 return;
@@ -221,7 +386,7 @@
 
                 if (data && data.success) {
                     alert(data.message || "تم تفريغ السجل بنجاح");
-                    await fetchAndDisplayLoginHistory(); // تحديث الجدول فوراً
+                    await fetchAndDisplayLoginHistory();
                 } else {
                     alert(data?.message || "عفواً، لا يمكنك تنفيذ هذا الإجراء");
                 }
@@ -231,7 +396,6 @@
             }
         }
 
-        // ================= دالة جلب وعرض سجل الدخول بالتنسيق الجديد =================
         async function fetchAndDisplayLoginHistory() {
             const tableContainer = document.getElementById('loginHistoryTableContainer');
             const titleElement = document.getElementById('loginHistoryTitle');
@@ -539,6 +703,8 @@
                             clickAction = "renderLoginHistoryScreen()";
                         } else if (item.includes('بيانات المستخدمين')) {
                             clickAction = "renderUserProfileMenuScreen()";
+                        } else if (item.includes('تسجيل مندوب جديد')) {
+                            clickAction = "renderRegisterRepresentativeScreen()";
                         }
 
                         return `
@@ -648,7 +814,6 @@
 
             currentUserId = data.id; 
 
-            // إرسال النبضة فوراً لحظة الدخول دون انتظار 10 ثواني
             try {
                 await supabaseClient.rpc('update_last_active_at', {
                     target_user_id: currentUserId
