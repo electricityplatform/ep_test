@@ -41,7 +41,22 @@
 
     </div>
 
-    <!-- كود الجافاسكريبت لإدارة النظام والصفحات والـ RPC المحددة فقط -->
+    <!-- نافذة الفلترة الهرمية المنبثقة العامة (Modal) -->
+    <div id="filterModalOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 transition-opacity opacity-0 duration-300">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 space-y-4 transform scale-95 transition-transform duration-300" id="filterModalContent">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <h3 class="font-bold text-gray-800 text-base" id="filterModalTitle">اختر نوع الفلترة</h3>
+                <button onclick="closeFilterModal()" class="text-gray-400 hover:text-red-500 p-1 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="filterModalBody" class="space-y-2">
+                <!-- المحتوى الديناميكي للخطوات -->
+            </div>
+        </div>
+    </div>
+
+    <!-- كود الجافاسكريبت لإدارة النظام والصفحات والـ RPC والفلترة -->
     <script>
         // ================= 1. المتغيرات وإعدادات الاتصال =================
         const SUPABASE_URL = 'https://glwwvrgvbfygqbmqlnfn.supabase.co';
@@ -61,7 +76,13 @@
         let currentBatteryModel = "";
         let heartbeatInterval = null;
 
-        // ================= الثوابت والدوال المساعدة للمحافظات والمناطق =================
+        // كاشات مؤقتة للفلترة في الشاشات المختلفة
+        window.allUserProfilesCache = [];
+        window.allActiveUsersCache = [];
+        window.allLoginHistoryCache = [];
+        let activeFilterContext = ''; // تحديد الشاشة الحالية للفلتر ('profiles', 'active', 'login')
+
+        // ================= الثوابت والدوال المساعدة للمحافظات =================
         const EGYPTIAN_GOVERNORATES = [
             "أسوان", "الأقصر", "قنا", "البحر الأحمر", "الوادي الجديد", "سوهاج", "أسيوط", 
             "المنيا", "بني سويف", "الجيزة", "القاهرة", "سيناء", "بورسعيد", "كفر الشيخ", 
@@ -121,7 +142,6 @@
                 areas.map(a => `<option value="${a}">${a}</option>`).join('');
         }
 
-        // ================= دالة تبديل رؤية كلمة المرور (العين) =================
         function togglePasswordVisibility(inputId, iconId) {
             const input = document.getElementById(inputId);
             const icon = document.getElementById(iconId);
@@ -136,109 +156,21 @@
             }
         }
 
-        // ================= نظام الهيرت بيت (Heartbeat) =================
         function startHeartbeat() {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
-
             heartbeatInterval = setInterval(async () => {
                 if (!currentUserId) return;
-
                 try {
-                    await supabaseClient.rpc('update_last_active_at', {
-                        target_user_id: currentUserId
-                    });
+                    await supabaseClient.rpc('update_last_active_at', { target_user_id: currentUserId });
                 } catch (err) {
                     console.error("Heartbeat error:", err);
                 }
             }, 10000);
         }
 
-        // ================= دالة عرض شاشة بيانات المستخدمين مع الفلترة الهرمية =================
-        async function renderUserProfilesScreen() {
-            toggleSidebar();
-
-            const container = document.getElementById('appContainer');
-            container.innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-3 flex-shrink-0 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
-                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            <span>رجوع</span>
-                        </button>
-                    </div>
-                    
-                    <div class="flex items-center gap-2">
-                        <!-- زر الفلتر التفاعلي -->
-                        <button type="button" onclick="openFilterModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                            <span>فلترة البيانات</span>
-                        </button>
-                        <button type="button" onclick="resetUserFilters()" id="resetFilterBtn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer">
-                            إلغاء الفلتر
-                        </button>
-                    </div>
-                </div>
-
-                <!-- مؤشر الفلتر النشط حالياً -->
-                <div id="activeFilterBadge" class="hidden bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-semibold mb-3 flex items-center justify-between flex-shrink-0">
-                    <span id="activeFilterText">---</span>
-                </div>
-
-                <h2 class="text-sm sm:text-base font-bold text-gray-800 mb-2">بيانات المستخدمين</h2>
-
-                <div id="userProfilesTableContainer" class="flex-1 overflow-y-auto p-1">
-                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب بيانات المستخدمين...</div>
-                </div>
-
-                <!-- نافذة الفلترة الهرمية المنبثقة (Modal) -->
-                <div id="filterModalOverlay" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 transition-opacity opacity-0 duration-300">
-                    <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 space-y-4 transform scale-95 transition-transform duration-300" id="filterModalContent">
-                        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                            <h3 class="font-bold text-gray-800 text-base" id="filterModalTitle">اختر نوع الفلترة</h3>
-                            <button onclick="closeFilterModal()" class="text-gray-400 hover:text-red-500 p-1 rounded-xl">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
-                        </div>
-                        <div id="filterModalBody" class="space-y-2">
-                            <!-- المحتوى الديناميكي للخطوات -->
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            loadDynamicMenuIntoSidebar();
-            window.allUserProfilesCache = []; 
-
-            const tableContainer = document.getElementById('userProfilesTableContainer');
-            try {
-                const { data, error } = await supabaseClient.rpc('get_user_profiles', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">خطأ في جلب البيانات: ${error.message}</div>`;
-                    return;
-                }
-
-                let profilesList = [];
-                if (Array.isArray(data)) {
-                    profilesList = data;
-                } else if (typeof data === 'string') {
-                    try { profilesList = JSON.parse(data); } catch(e){}
-                }
-
-                window.allUserProfilesCache = profilesList;
-                renderProfilesTableHTML(profilesList);
-
-            } catch (err) {
-                console.error(err);
-                tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
-            }
-        }
-
-        // ================= فتح وإغلاق نافذة الفلتر =================
-        function openFilterModal() {
+        // ================= نظام الفلترة المنبثق الهرمي العام =================
+        function openFilterModal(context) {
+            activeFilterContext = context;
             const overlay = document.getElementById('filterModalOverlay');
             const content = document.getElementById('filterModalContent');
             if (!overlay || !content) return;
@@ -262,22 +194,33 @@
             setTimeout(() => overlay.classList.add('hidden'), 300);
         }
 
-        // ================= الخطوة 1: القائمة الرئيسية للفلتر (رتبة أو محافظة) =================
         function showMainFilterOptions() {
-            document.getElementById('filterModalTitle').innerText = 'اختر نوع الفلترة';
-            document.getElementById('filterModalBody').innerHTML = `
+            const titleElem = document.getElementById('filterModalTitle');
+            const bodyElem = document.getElementById('filterModalBody');
+            if (!titleElem || !bodyElem) return;
+
+            titleElem.innerText = 'اختر نوع الفلترة';
+            
+            let govButtonHtml = '';
+            // شاشة بيانات المستخدمين تحتوي على محافظات، أما النشطين وسجل الدخول فلترة بالرتبة فقط أو حسب المتاح
+            if (activeFilterContext === 'profiles') {
+                govButtonHtml = `
+                    <button onclick="showGovTypeOptions()" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3.5 rounded-2xl text-right font-semibold text-gray-800 transition-all flex items-center justify-between cursor-pointer">
+                        <span>فلترة بناءً على المحافظة</span>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                `;
+            }
+
+            bodyElem.innerHTML = `
                 <button onclick="showRoleFilterOptions()" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3.5 rounded-2xl text-right font-semibold text-gray-800 transition-all flex items-center justify-between cursor-pointer">
                     <span>فلترة بناءً على الرتبة</span>
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
-                <button onclick="showGovTypeOptions()" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3.5 rounded-2xl text-right font-semibold text-gray-800 transition-all flex items-center justify-between cursor-pointer">
-                    <span>فلترة بناءً على المحافظة</span>
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
+                ${govButtonHtml}
             `;
         }
 
-        // ================= الخطوة 2أ: عرض خيارات الرتب =================
         function showRoleFilterOptions() {
             const roles = ['أدمن', 'مدير', 'مندوب', 'تاجر', 'فنى'];
             document.getElementById('filterModalTitle').innerText = 'اختر الرتبة المطلوبة';
@@ -296,7 +239,6 @@
             `;
         }
 
-        // ================= الخطوة 2ب: اختيار نوع المحافظة (متجر، محل، توصيل) =================
         function showGovTypeOptions() {
             document.getElementById('filterModalTitle').innerText = 'اختر نوع المحافظة';
             document.getElementById('filterModalBody').innerHTML = `
@@ -318,7 +260,6 @@
             `;
         }
 
-        // ================= الخطوة 3: عرض قائمة المحافظات الـ 23 =================
         function showGovernoratesList(cityColumnKey, labelName) {
             document.getElementById('filterModalTitle').innerText = `اختر ${labelName}`;
             document.getElementById('filterModalBody').innerHTML = `
@@ -336,26 +277,33 @@
             `;
         }
 
-        // ================= تطبيق فلتر الرتبة =================
         function applyRoleFilter(role) {
             closeFilterModal();
-            const filtered = window.allUserProfilesCache.filter(user => user.user_role && user.user_role.trim() === role);
-            renderProfilesTableHTML(filtered);
-            
-            showActiveFilterBadge(`فلتر نشط: الرتبة (${role})`);
+            if (activeFilterContext === 'profiles') {
+                const filtered = window.allUserProfilesCache.filter(user => user.user_role && user.user_role.trim() === role);
+                renderProfilesTableHTML(filtered);
+                showActiveFilterBadge(`فلتر نشط: الرتبة (${role})`, 'profiles');
+            } else if (activeFilterContext === 'active') {
+                const filtered = window.allActiveUsersCache.filter(user => user.user_role && user.user_role.trim() === role);
+                renderActiveUsersTableHTML(filtered);
+                showActiveFilterBadge(`فلتر نشط: الرتبة (${role})`, 'active');
+            } else if (activeFilterContext === 'login') {
+                const filtered = window.allLoginHistoryCache.filter(item => item.user_role && item.user_role.trim() === role);
+                renderLoginHistoryTableHTML(filtered);
+                showActiveFilterBadge(`فلتر نشط: الرتبة (${role})`, 'login');
+            }
         }
 
-        // ================= تطبيق فلتر المحافظة المحدد =================
         function applyGovFilter(columnKey, govName, labelName) {
             closeFilterModal();
-            const filtered = window.allUserProfilesCache.filter(user => user[columnKey] && user[columnKey].trim() === govName);
-            renderProfilesTableHTML(filtered);
-
-            showActiveFilterBadge(`فلتر نشط: ${labelName} (${govName})`);
+            if (activeFilterContext === 'profiles') {
+                const filtered = window.allUserProfilesCache.filter(user => user[columnKey] && user[columnKey].trim() === govName);
+                renderProfilesTableHTML(filtered);
+                showActiveFilterBadge(`فلتر نشط: ${labelName} (${govName})`, 'profiles');
+            }
         }
 
-        // ================= إظهار شريط الفلتر النشط =================
-        function showActiveFilterBadge(text) {
+        function showActiveFilterBadge(text, context) {
             const badge = document.getElementById('activeFilterBadge');
             const badgeText = document.getElementById('activeFilterText');
             const resetBtn = document.getElementById('resetFilterBtn');
@@ -367,24 +315,73 @@
             }
         }
 
-        // ================= إعادة تعيين الفلتر =================
-        function resetUserFilters() {
+        function resetUserFilters(context) {
             const badge = document.getElementById('activeFilterBadge');
             const resetBtn = document.getElementById('resetFilterBtn');
 
             if (badge) badge.classList.add('hidden');
             if (resetBtn) resetBtn.classList.add('hidden');
 
-            if (window.allUserProfilesCache) {
+            if (context === 'profiles') {
                 renderProfilesTableHTML(window.allUserProfilesCache);
+            } else if (context === 'active') {
+                renderActiveUsersTableHTML(window.allActiveUsersCache);
+            } else if (context === 'login') {
+                renderLoginHistoryTableHTML(window.allLoginHistoryCache);
             }
         }
 
-        // ================= دالة رسم الجدول =================
+        // ================= 2. شاشة بيانات المستخدمين =================
+        async function renderUserProfilesScreen() {
+            toggleSidebar();
+            const container = document.getElementById('appContainer');
+            container.innerHTML = `
+                ${getHeaderTemplate()}
+                <div class="flex items-center justify-between mb-3 flex-shrink-0 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            <span>رجوع</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openFilterModal('profiles')" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                            <span>فلترة البيانات</span>
+                        </button>
+                        <button type="button" onclick="resetUserFilters('profiles')" id="resetFilterBtn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+                            إلغاء الفلتر
+                        </button>
+                    </div>
+                </div>
+                <div id="activeFilterBadge" class="hidden bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-semibold mb-3 flex items-center justify-between flex-shrink-0">
+                    <span id="activeFilterText">---</span>
+                </div>
+                <h2 class="text-sm sm:text-base font-bold text-gray-800 mb-2">بيانات المستخدمين</h2>
+                <div id="userProfilesTableContainer" class="flex-1 overflow-y-auto p-1">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب بيانات المستخدمين...</div>
+                </div>
+            `;
+
+            loadDynamicMenuIntoSidebar();
+            const tableContainer = document.getElementById('userProfilesTableContainer');
+            try {
+                const { data, error } = await supabaseClient.rpc('get_user_profiles', { p_user_id: currentUserId });
+                if (error) {
+                    tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">خطأ في جلب البيانات: ${error.message}</div>`;
+                    return;
+                }
+                let profilesList = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+                window.allUserProfilesCache = profilesList;
+                renderProfilesTableHTML(profilesList);
+            } catch (err) {
+                tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
+            }
+        }
+
         function renderProfilesTableHTML(profilesList) {
             const tableContainer = document.getElementById('userProfilesTableContainer');
             if (!tableContainer) return;
-
             if (profilesList.length > 0) {
                 tableContainer.innerHTML = `
                     <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
@@ -441,16 +438,13 @@
                     </div>
                 `;
             } else {
-                tableContainer.innerHTML = `<div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">لا توجد بيانات مطابقة للفلتر</div>`;
+                tableContainer.innerHTML = `<div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">لا توجد بيانات مطابقة</div>`;
             }
         }
 
-        // ================= باقي الدوال (العرض، تسجيل الدخول، المنيو، إلخ كما هي تماماً) =================
-        async function renderPersonalProfileScreen(isEditMode = false) {
-            if (document.getElementById('sideMenu') && !document.getElementById('sideMenu').classList.contains('translate-x-full')) {
-                toggleSidebar();
-            }
-
+        // ================= 3. شاشة المستخدمين النشطين (مع زر الفلتر) =================
+        async function renderActiveUsersScreen() {
+            toggleSidebar();
             const container = document.getElementById('appContainer');
             container.innerHTML = `
                 ${getHeaderTemplate()}
@@ -460,435 +454,114 @@
                             <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                             <span>رجوع</span>
                         </button>
-                        
-                        ${!isEditMode ? `
-                            <button type="button" onclick="renderPersonalProfileScreen(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
-                                <span>تعديل البيانات</span>
-                            </button>
-                        ` : `
-                            <button type="button" onclick="renderPersonalProfileScreen(false)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
-                                <span>إلغاء التعديل</span>
-                            </button>
-                        `}
-
-                        <button type="button" onclick="handleDeletePersonalProfile()" class="bg-red-50 hover:bg-red-100 text-red-600 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 border border-red-200 cursor-pointer">
-                            <span>حذف الحساب</span>
+                        <button type="button" onclick="event.stopPropagation(); fetchAndDisplayActiveUsers();" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 border border-blue-200 cursor-pointer" title="تحديث البيانات">
+                            <svg class="w-4 h-4 transform transition-transform hover:rotate-180 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            <span>تحديث</span>
                         </button>
                     </div>
-                    <h2 class="text-base sm:text-lg font-bold text-gray-800">
-                        ${isEditMode ? 'تعديل البيانات الشخصية' : 'البيانات الشخصية'}
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openFilterModal('active')" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                            <span>فلترة البيانات</span>
+                        </button>
+                        <button type="button" onclick="resetUserFilters('active')" id="resetFilterBtn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+                            إلغاء الفلتر
+                        </button>
+                    </div>
+
+                    <h2 id="activeUsersTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2 w-full mt-2">
+                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                        المستخدمون النشطون
                     </h2>
                 </div>
 
-                <div id="personalProfileContainer" class="flex-1 overflow-y-auto p-1 max-w-xl mx-auto w-full space-y-4">
-                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب البيانات...</div>
+                <div id="activeFilterBadge" class="hidden bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-semibold mb-3 flex items-center justify-between flex-shrink-0">
+                    <span id="activeFilterText">---</span>
+                </div>
+
+                <div id="activeUsersTableContainer" class="flex-1 overflow-y-auto p-1">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب المستخدمين النشطين...</div>
                 </div>
             `;
 
             loadDynamicMenuIntoSidebar();
-            await fetchAndDisplayPersonalProfile(isEditMode);
+            await fetchAndDisplayActiveUsers();
         }
 
-        async function handleDeletePersonalProfile() {
-            if (!currentUserId) {
-                alert("عفواً، لا يوجد مستخدم مسجل حالياً");
-                return;
-            }
-
-            const confirmDelete = confirm("هل أنت متأكد من رغبتك في حذف حسابك نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.");
-            if (!confirmDelete) return;
+        async function fetchAndDisplayActiveUsers() {
+            const tableContainer = document.getElementById('activeUsersTableContainer');
+            const titleElement = document.getElementById('activeUsersTitle');
+            if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري تحديث البيانات...</div>`;
 
             try {
-                const { data, error } = await supabaseClient.rpc('delete_personal_profile', {
-                    p_user_id: currentUserId
-                });
-
+                const { data, error } = await supabaseClient.rpc('get_active_users', { p_user_id: currentUserId });
                 if (error) {
-                    alert("خطأ أثناء حذف الحساب: " + error.message);
+                    if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
                     return;
                 }
 
-                if (data && data.success) {
-                    alert(data.message || "تم حذف المستخدم بنجاح");
-                    loginAsVisitor();
-                } else {
-                    alert(data?.message || "فشل العثور على المستخدم للحذف");
-                }
+                let activeUsers = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+                window.allActiveUsersCache = activeUsers;
+                renderActiveUsersTableHTML(activeUsers);
             } catch (err) {
-                console.error("Delete personal profile error:", err);
-                alert("حدث خطأ غير متوقع أثناء عملية الحذف");
+                console.error("Error fetching active users:", err);
             }
         }
 
-        async function fetchAndDisplayPersonalProfile(isEditMode = false) {
-            const profileContainer = document.getElementById('personalProfileContainer');
-            if (!profileContainer) return;
+        function renderActiveUsersTableHTML(activeUsers) {
+            const tableContainer = document.getElementById('activeUsersTableContainer');
+            const titleElement = document.getElementById('activeUsersTitle');
+            if (!tableContainer) return;
 
-            if (!currentUserId) {
-                profileContainer.innerHTML = `
-                    <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
-                        <p class="font-semibold">عفواً، يجب تسجيل الدخول أولاً لعرض البيانات الشخصية</p>
+            if (titleElement) {
+                titleElement.innerHTML = `
+                    <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                    المستخدمون النشطون (${activeUsers.length})
+                `;
+            }
+
+            if (activeUsers.length > 0) {
+                tableContainer.innerHTML = `
+                    <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                        <table class="w-full text-right text-xs sm:text-sm">
+                            <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-3.5 font-bold">الرتبة</th>
+                                    <th class="p-3.5 font-bold">الاسم</th>
+                                    <th class="p-3.5 font-bold">رقم الهاتف</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                ${activeUsers.map(user => `
+                                    <tr class="hover:bg-blue-50/50 transition-all">
+                                        <td class="p-3.5">
+                                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                (user.user_role === 'admin' || user.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                            }" dir="auto">
+                                                ${user.user_role || 'مستخدم'}
+                                            </span>
+                                        </td>
+                                        <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || 'بدون اسم'}</td>
+                                        <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 `;
-                return;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.rpc('get_personal_profile', {
-                    p_user_id: currentUserId
-                });
-
-                if (error || (data && data.success === false)) {
-                    profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
-                    return;
-                }
-
-                const fieldLabels = {
-                    user_role: "الرتبة",
-                    user_name: "الاسم",
-                    store_name: "اسم المتجر",
-                    store_city: "محافظة المتجر",
-                    store_region: "منطقة المتجر",
-                    store_area: "نطاق المتجر",
-                    store_address: "عنوان المتجر",
-                    shop_name: "اسم المحل",
-                    shop_city: "محافظة المحل",
-                    shop_region: "منطقة المحل",
-                    shop_area: "نطاق المحل",
-                    shop_address: "عنوان المحل",
-                    delivery_city: "محافظة التوصيل",
-                    delivery_region: "منطقة التوصيل",
-                    delivery_area: "نطاق التوصيل",
-                    phone_number: "رقم الهاتف",
-                    whatsapp_number: "رقم الواتساب",
-                    gmail: "البريد الإلكترونى",
-                    password: "رمز المرور"
-                };
-
-                let profileData = typeof data === 'string' ? JSON.parse(data) : data;
-                const role = profileData.user_role;
-                let orderedKeys = [];
-
-                if (role === 'أدمن' || role === 'admin') {
-                    orderedKeys = [
-                        'user_role', 'user_name', 
-                        'store_name', 'store_city', 'store_region', 'store_area', 'store_address',
-                        'shop_name', 'shop_city', 'shop_region', 'shop_area', 'shop_address',
-                        'delivery_city', 'delivery_region', 'delivery_area',
-                        'phone_number', 'whatsapp_number', 'gmail', 'password'
-                    ];
-                } else if (role === 'مدير' || role === 'head' || role === 'manager') {
-                    orderedKeys = ['user_role', 'user_name', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
-                } else if (role === 'مندوب' || role === 'rep') {
-                    orderedKeys = ['user_role', 'user_name', 'delivery_city', 'delivery_region', 'delivery_area', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
-                } else if (role === 'تاجر' || role === 'merchant' || role === 'trader') {
-                    orderedKeys = ['user_role', 'user_name', 'store_name', 'store_city', 'store_region', 'store_area', 'store_address', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
-                } else if (role === 'فنى' || role === 'فني' || role === 'tech' || role === 'technician') {
-                    orderedKeys = ['user_role', 'user_name', 'shop_name', 'shop_city', 'shop_region', 'shop_area', 'shop_address', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
-                } else {
-                    orderedKeys = Object.keys(profileData);
-                }
-
-                if (!isEditMode) {
-                    let contentHtml = orderedKeys
-                        .filter(key => profileData.hasOwnProperty(key))
-                        .map(key => {
-                            const label = fieldLabels[key] || key;
-                            let value = (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== '') ? profileData[key] : 'غير متوفر';
-                            const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
-
-                            if (key === 'password' && value !== 'غير متوفر') {
-                                value = '••••••••';
-                            }
-
-                            return `
-                                <div class="w-full space-y-1">
-                                    <label class="block text-xs font-semibold text-gray-500 text-right pr-2">${label}</label>
-                                    <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm text-center" dir="${isLtr ? 'ltr' : 'auto'}">
-                                        ${value}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('');
-
-                    profileContainer.innerHTML = contentHtml;
-                } else {
-                    let formFieldsHtml = orderedKeys
-                        .filter(key => profileData.hasOwnProperty(key))
-                        .map(key => {
-                            const label = fieldLabels[key] || key;
-                            const value = profileData[key] || '';
-                            const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
-                            const isReadOnly = (key === 'user_role');
-
-                            if (key === 'store_city' || key === 'shop_city' || key === 'delivery_city') {
-                                const prefix = key.replace('_city', '');
-                                return `
-                                    <div class="w-full space-y-1">
-                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
-                                        <select 
-                                            id="edit_${key}" 
-                                            onchange="updateRegionsDropdown('edit_${key}', 'edit_${prefix}_region', 'edit_${prefix}_area')" 
-                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
-                                        >
-                                            ${getGovernoratesOptionsHtml(value)}
-                                        </select>
-                                    </div>
-                                `;
-                            }
-
-                            if (key === 'store_region' || key === 'shop_region' || key === 'delivery_region') {
-                                const prefix = key.replace('_region', '');
-                                const parentCity = profileData[`${prefix}_city`] || '';
-                                const regions = getRegionsListForCity(parentCity);
-
-                                return `
-                                    <div class="w-full space-y-1">
-                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
-                                        <select 
-                                            id="edit_${key}" 
-                                            onchange="updateAreasDropdown('edit_${key}', 'edit_${prefix}_area')" 
-                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
-                                        >
-                                            <option value="">اختر المنطقة...</option>
-                                            ${regions.map(r => `<option value="${r}" ${r === value ? 'selected' : ''}>${r}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                `;
-                            }
-
-                            if (key === 'store_area' || key === 'shop_area' || key === 'delivery_area') {
-                                return `
-                                    <div class="w-full space-y-1">
-                                        <label class="block text-xs font-semibold text-gray-500 text-right pr-2">${label}</label>
-                                        <input 
-                                            type="text" 
-                                            id="edit_${key}" 
-                                            value="${value || 'غير متوفر'}" 
-                                            disabled 
-                                            class="w-full bg-gray-200 text-gray-500 border border-gray-300 text-sm font-bold rounded-2xl px-4 py-3.5 shadow-sm text-center cursor-not-allowed"
-                                        >
-                                    </div>
-                                `;
-                            }
-
-                            if (key === 'password') {
-                                return `
-                                    <div class="w-full space-y-1">
-                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
-                                        <div class="relative">
-                                            <input 
-                                                type="password" 
-                                                id="edit_${key}" 
-                                                value="${value}" 
-                                                class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 pl-12 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-                                                dir="ltr"
-                                            >
-                                            <button type="button" onclick="togglePasswordVisibility('edit_${key}', 'eyeIcon_${key}')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
-                                                <svg id="eyeIcon_${key}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-
-                            return `
-                                <div class="w-full space-y-1">
-                                    <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
-                                    <input 
-                                        type="${key === 'gmail' ? 'email' : 'text'}" 
-                                        id="edit_${key}" 
-                                        value="${value}" 
-                                        ${isReadOnly ? 'disabled class="w-full bg-gray-200 text-gray-500 border border-gray-300 text-sm font-bold rounded-2xl px-4 py-3.5 shadow-sm text-center cursor-not-allowed"' : 'class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"'}
-                                        dir="${isLtr ? 'ltr' : 'auto'}"
-                                    >
-                                </div>
-                            `;
-                        }).join('');
-
-                    profileContainer.innerHTML = `
-                        <form onsubmit="handleSavePersonalProfile(event)" class="space-y-4">
-                            ${formFieldsHtml}
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all text-sm cursor-pointer mt-6">
-                                حفظ التغييرات
-                            </button>
-                        </form>
-                    `;
-                }
-            } catch (err) {
-                console.error(err);
-                profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
+            } else {
+                tableContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                        <p class="font-semibold">لا توجد نتائج مطابقة</p>
+                    </div>
+                `;
             }
         }
 
-        async function handleSavePersonalProfile(e) {
-            e.preventDefault();
-
-            const getVal = (id) => {
-                const el = document.getElementById(`edit_${id}`);
-                return el ? el.value.trim() : null;
-            };
-
-            try {
-                const { data, error } = await supabaseClient.rpc('update_personal_profile', {
-                    p_user_id: currentUserId,
-                    p_user_name: getVal('user_name'),
-                    p_store_name: getVal('store_name'),
-                    p_store_city: getVal('store_city'),
-                    p_store_region: getVal('store_region'),
-                    p_store_area: getVal('store_area'),
-                    p_store_address: getVal('store_address'),
-                    p_shop_name: getVal('shop_name'),
-                    p_shop_city: getVal('shop_city'),
-                    p_shop_region: getVal('shop_region'),
-                    p_shop_area: getVal('shop_area'),
-                    p_shop_address: getVal('shop_address'),
-                    p_delivery_city: getVal('delivery_city'),
-                    p_delivery_region: getVal('delivery_region'),
-                    p_delivery_area: getVal('delivery_area'),
-                    p_phone_number: getVal('phone_number'),
-                    p_whatsapp_number: getVal('whatsapp_number'),
-                    p_gmail: getVal('gmail'),
-                    p_password: getVal('password')
-                });
-
-                if (error) {
-                    alert("خطأ أثناء حفظ التغييرات: " + error.message);
-                    return;
-                }
-
-                if (data && data.success) {
-                    alert(data.message || "تم تحديث البيانات بنجاح");
-                    
-                    if (getVal('user_name')) currentUserName = getVal('user_name');
-                    if (getVal('phone_number')) currentUserPhone = getVal('phone_number');
-                    
-                    await renderPersonalProfileScreen(false);
-                } else {
-                    alert(data?.message || "تعذر حفظ البيانات");
-                }
-            } catch (err) {
-                console.error("Save profile error:", err);
-                alert("حدث خطأ غير متوقع أثناء الحفظ");
-            }
-        }
-
-        async function renderRegisterRepresentativeScreen() {
-            toggleSidebar();
-
-            const container = document.getElementById('appContainer');
-
-            container.innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        تسجيل مندوب جديد
-                    </h2>
-                </div>
-
-                <div class="flex-1 overflow-y-auto p-2">
-                    <form onsubmit="handleRegisterRepresentative(event)" class="space-y-4 max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">الرتبة</label>
-                            <input type="text" value="مندوب" disabled class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 text-sm font-bold text-center" dir="auto">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
-                            <input type="text" id="repName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="auto" placeholder="ادخل اسم المندوب">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">محافظة التوصيل</label>
-                            <select id="repCity" onchange="updateRegionsDropdown('repCity', 'repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
-                                ${getGovernoratesOptionsHtml()}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">منطقة التوصيل</label>
-                            <select id="repRegion" onchange="updateAreasDropdown('repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
-                                <option value="">اختر المحافظة أولاً...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">نطاق التوصيل</label>
-                            <select id="repArea" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
-                                <option value="">اختر منطقة التوصيل أولاً...</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
-                            <input type="text" id="repPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="01xxxxxxxxx">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الواتساب</label>
-                            <input type="text" id="repWhatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="01xxxxxxxxx">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">البريد الإلكترونى</label>
-                            <input type="email" id="repGmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="example@gmail.com">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
-                            <div class="relative">
-                                <input type="password" id="repPassword" required class="w-full px-4 py-2.5 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="••••••••">
-                                <button type="button" onclick="togglePasswordVisibility('repPassword', 'repEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
-                                    <svg id="repEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm cursor-pointer">
-                            حفظ وتسجيل المندوب
-                        </button>
-                    </form>
-                </div>
-            `;
-
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function handleRegisterRepresentative(e) {
-            e.preventDefault();
-            try {
-                const { data, error } = await supabaseClient.rpc('register_representative', {
-                    p_user_id: currentUserId,
-                    p_user_name: document.getElementById('repName').value.trim(),
-                    p_delivery_city: document.getElementById('repCity').value,
-                    p_delivery_region: document.getElementById('repRegion').value,
-                    p_delivery_area: document.getElementById('repArea').value,
-                    phone_number: document.getElementById('repPhone').value.trim(),
-                    whatsapp_number: document.getElementById('repWhatsapp').value.trim(),
-                    gmail: document.getElementById('repGmail').value.trim(),
-                    password: document.getElementById('repPassword').value.trim()
-                });
-
-                if (error) {
-                    alert("خطأ: " + error.message);
-                    return;
-                }
-
-                if (data && data.success) {
-                    alert(data.message || "تم تسجيل المندوب بنجاح");
-                    renderMainDashboard();
-                } else {
-                    alert(data?.message || "عفواً، لا تملك الصلاحية لتنفيذ هذا الإجراء");
-                }
-            } catch (err) {
-                console.error(err);
-                alert("حدث خطأ غير متوقع أثناء التسجيل");
-            }
-        }
-
+        // ================= 4. شاشة سجل دخول المستخدمين (مع زر الفلتر) =================
         async function renderLoginHistoryScreen() {
             toggleSidebar();
-
             const container = document.getElementById('appContainer');
             container.innerHTML = `
                 ${getHeaderTemplate()}
@@ -904,14 +577,30 @@
                         </button>
                         <button type="button" onclick="handleDeleteLoginHistory();" class="bg-red-50 hover:bg-red-100 text-red-600 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 border border-red-200 cursor-pointer" title="حذف السجل">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            <span>حذف السجل</span>
+                            <span>حذف</span>
                         </button>
                     </div>
-                    <h2 id="loginHistoryTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openFilterModal('login')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 shadow-sm cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                            <span>فلترة</span>
+                        </button>
+                        <button type="button" onclick="resetUserFilters('login')" id="resetFilterBtn" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+                            إلغاء
+                        </button>
+                    </div>
+
+                    <h2 id="loginHistoryTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2 w-full mt-2">
                         <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
                         سجل دخول المستخدمين
                     </h2>
                 </div>
+
+                <div id="activeFilterBadge" class="hidden bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1.5 rounded-xl text-xs font-semibold mb-3 flex items-center justify-between flex-shrink-0">
+                    <span id="activeFilterText">---</span>
+                </div>
+
                 <div id="loginHistoryTableContainer" class="flex-1 overflow-y-auto p-1">
                     <div class="text-center text-gray-400 text-sm py-8">جاري جلب سجل الدخول...</div>
                 </div>
@@ -921,21 +610,105 @@
             await fetchAndDisplayLoginHistory();
         }
 
-        async function handleDeleteLoginHistory() {
-            if (!confirm("هل أنت متأكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) {
-                return;
-            }
+        async function fetchAndDisplayLoginHistory() {
+            const tableContainer = document.getElementById('loginHistoryTableContainer');
+            if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري تحديث البيانات...</div>`;
 
             try {
-                const { data, error } = await supabaseClient.rpc('delete_login_history', {
-                    p_user_id: currentUserId
-                });
+                const { data, error } = await supabaseClient.rpc('get_login_history', { p_user_id: currentUserId });
+                if (error) {
+                    if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
+                    return;
+                }
 
+                let historyList = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
+                window.allLoginHistoryCache = historyList;
+                renderLoginHistoryTableHTML(historyList);
+            } catch (err) {
+                console.error("Error fetching login history:", err);
+            }
+        }
+
+        function renderLoginHistoryTableHTML(historyList) {
+            const tableContainer = document.getElementById('loginHistoryTableContainer');
+            const titleElement = document.getElementById('loginHistoryTitle');
+            if (!tableContainer) return;
+
+            if (titleElement) {
+                titleElement.innerHTML = `
+                    <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                    سجل دخول المستخدمين (${historyList.length})
+                `;
+            }
+
+            if (historyList.length > 0) {
+                tableContainer.innerHTML = `
+                    <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                        <table class="w-full text-right text-xs sm:text-sm">
+                            <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
+                                <tr>
+                                    <th class="p-3.5 font-bold whitespace-nowrap min-w-[130px]">آخر دخول</th>
+                                    <th class="p-3.5 font-bold">الرتبة</th>
+                                    <th class="p-3.5 font-bold">الاسم</th>
+                                    <th class="p-3.5 font-bold">رقم الهاتف</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 bg-white">
+                                ${historyList.map(item => {
+                                    let rawTime = item.login_times || '';
+                                    let datePart = '---';
+                                    let timePart = '';
+
+                                    if (rawTime && rawTime.includes('T')) {
+                                        const parts = rawTime.split('T');
+                                        datePart = parts[0];
+                                        timePart = parts[1] ? parts[1].split('.')[0] : '';
+                                    } else if (rawTime && rawTime.includes(' ')) {
+                                        const parts = rawTime.split(' ');
+                                        datePart = parts[0];
+                                        timePart = parts[1] || '';
+                                    } else {
+                                        datePart = rawTime || '---';
+                                    }
+
+                                    return `
+                                        <tr class="hover:bg-blue-50/50 transition-all">
+                                            <td class="p-3.5 font-mono text-gray-700 leading-tight min-w-[130px]" dir="ltr">
+                                                <div class="font-bold text-gray-800">${datePart}</div>${timePart ? `<div class="text-[11px] text-gray-500 mt-0.5">${timePart}</div>` : ''}
+                                            </td>
+                                            <td class="p-3.5">
+                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                    (item.user_role === 'admin' || item.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                                                }" dir="auto">
+                                                    ${item.user_role || 'مستخدم'}
+                                                </span>
+                                            </td>
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${item.user_name || 'بدون اسم'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${item.phone_number || '---'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                tableContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                        <p class="font-semibold">لا توجد نتائج مطابقة</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function handleDeleteLoginHistory() {
+            if (!confirm("هل أنت متأكد من رغبتك في تفريغ سجل دخول المستخدمين بالكامل؟")) return;
+            try {
+                const { data, error } = await supabaseClient.rpc('delete_login_history', { p_user_id: currentUserId });
                 if (error) {
                     alert("حدث خطأ أثناء الاتصال بقاعدة البيانات: " + error.message);
                     return;
                 }
-
                 if (data && data.success) {
                     alert(data.message || "تم تفريغ السجل بنجاح");
                     await fetchAndDisplayLoginHistory();
@@ -943,239 +716,14 @@
                     alert(data?.message || "عفواً، لا يمكنك تنفيذ هذا الإجراء");
                 }
             } catch (err) {
-                console.error("Delete login history error:", err);
                 alert("حدث خطأ غير متوقع أثناء الحذف");
             }
         }
 
-        async function fetchAndDisplayLoginHistory() {
-            const tableContainer = document.getElementById('loginHistoryTableContainer');
-            const titleElement = document.getElementById('loginHistoryTitle');
-            
-            if (tableContainer) {
-                tableContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري تحديث البيانات...</div>`;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.rpc('get_login_history', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    showSystemAlert("خطأ في جلب سجل الدخول", currentUserId || "غير معروف", "get_login_history", error.message);
-                    if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
-                    return;
-                }
-
-                let historyList = [];
-                if (Array.isArray(data)) {
-                    historyList = data;
-                } else if (typeof data === 'string') {
-                    try { historyList = JSON.parse(data); } catch(e){}
-                }
-
-                if (titleElement) {
-                    titleElement.innerHTML = `
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        سجل دخول المستخدمين (${historyList.length})
-                    `;
-                }
-
-                let contentHtml = "";
-                if (historyList.length > 0) {
-                    contentHtml = `
-                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                            <table class="w-full text-right text-xs sm:text-sm">
-                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
-                                    <tr>
-                                        <th class="p-3.5 font-bold whitespace-nowrap min-w-[130px]">آخر دخول</th>
-                                        <th class="p-3.5 font-bold">الرتبة</th>
-                                        <th class="p-3.5 font-bold">الاسم</th>
-                                        <th class="p-3.5 font-bold">رقم الهاتف</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 bg-white">
-                                    ${historyList.map(item => {
-                                        let rawTime = item.login_times || '';
-                                        let datePart = '---';
-                                        let timePart = '';
-
-                                        if (rawTime && rawTime.includes('T')) {
-                                            const parts = rawTime.split('T');
-                                            datePart = parts[0];
-                                            timePart = parts[1] ? parts[1].split('.')[0] : '';
-                                        } else if (rawTime && rawTime.includes(' ')) {
-                                            const parts = rawTime.split(' ');
-                                            datePart = parts[0];
-                                            timePart = parts[1] || '';
-                                        } else {
-                                            datePart = rawTime || '---';
-                                        }
-
-                                        return `
-                                            <tr class="hover:bg-blue-50/50 transition-all">
-                                                <td class="p-3.5 font-mono text-gray-700 leading-tight min-w-[130px]" dir="ltr">
-                                                    <div class="font-bold text-gray-800">${datePart}</div>${timePart ? `<div class="text-[11px] text-gray-500 mt-0.5">${timePart}</div>` : ''}
-                                                </td>
-                                                <td class="p-3.5">
-                                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                        (item.user_role === 'admin' || item.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                                                    }" dir="auto">
-                                                        ${item.user_role || 'مستخدم'}
-                                                    </span>
-                                                </td>
-                                                <td class="p-3.5 font-semibold text-gray-800" dir="auto">${item.user_name || 'بدون اسم'}</td>
-                                                <td class="p-3.5 font-mono text-gray-600" dir="ltr">${item.phone_number || '---'}</td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                } else {
-                    contentHtml = `
-                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                            <p class="font-semibold">لا توجد سجلات دخول متاحة حالياً</p>
-                        </div>
-                    `;
-                }
-
-                if (tableContainer) {
-                    tableContainer.innerHTML = contentHtml;
-                }
-            } catch (err) {
-                console.error("Error fetching login history:", err);
-            }
-        }
-
-        async function renderActiveUsersScreen() {
-            toggleSidebar();
-
-            const container = document.getElementById('appContainer');
-            container.innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
-                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            <span>رجوع</span>
-                        </button>
-                        <button type="button" onclick="event.stopPropagation(); fetchAndDisplayActiveUsers();" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 border border-blue-200 cursor-pointer" title="تحديث البيانات">
-                            <svg class="w-4 h-4 transform transition-transform hover:rotate-180 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>تحديث</span>
-                        </button>
-                    </div>
-                    <h2 id="activeUsersTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
-                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                        المستخدمون النشطون
-                    </h2>
-                </div>
-                <div id="activeUsersTableContainer" class="flex-1 overflow-y-auto p-1">
-                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب المستخدمين النشطين...</div>
-                </div>
-            `;
-
-            loadDynamicMenuIntoSidebar();
-            await fetchAndDisplayActiveUsers();
-        }
-
-        async function fetchAndDisplayActiveUsers() {
-            const tableContainer = document.getElementById('activeUsersTableContainer');
-            const titleElement = document.getElementById('activeUsersTitle');
-            
-            if (tableContainer) {
-                tableContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري تحديث البيانات...</div>`;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.rpc('get_active_users', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    showSystemAlert("خطأ في جلب النشطين", currentUserId || "غير معروف", "get_active_users", error.message);
-                    if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
-                    return;
-                }
-
-                let activeUsers = [];
-                if (Array.isArray(data)) {
-                    activeUsers = data;
-                } else if (typeof data === 'string') {
-                    try { activeUsers = JSON.parse(data); } catch(e){}
-                }
-
-                if (titleElement) {
-                    titleElement.innerHTML = `
-                        <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                        المستخدمون النشطون (${activeUsers.length})
-                    `;
-                }
-
-                let contentHtml = "";
-                if (activeUsers.length > 0) {
-                    contentHtml = `
-                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                            <table class="w-full text-right text-xs sm:text-sm">
-                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
-                                    <tr>
-                                        <th class="p-3.5 font-bold">الرتبة</th>
-                                        <th class="p-3.5 font-bold">الاسم</th>
-                                        <th class="p-3.5 font-bold">رقم الهاتف</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 bg-white">
-                                    ${activeUsers.map(user => `
-                                        <tr class="hover:bg-blue-50/50 transition-all">
-                                            <td class="p-3.5">
-                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                    (user.user_role === 'admin' || user.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                                                }" dir="auto">
-                                                    ${user.user_role || 'مستخدم'}
-                                                </span>
-                                            </td>
-                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || 'بدون اسم'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                } else {
-                    contentHtml = `
-                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                            <p class="font-semibold">لا يوجد مستخدمون نشطون في آخر 21 ثانية</p>
-                        </div>
-                    `;
-                }
-
-                if (tableContainer) {
-                    tableContainer.innerHTML = contentHtml;
-                }
-            } catch (err) {
-                console.error("Error fetching active users:", err);
-            }
-        }
-
-        function showSystemAlert(title, idStatus, menuStatus, errorDetails = "") {
-            let message = `--- 🔍 تقرير حالة النظام والأخطاء ---\n\n`;
-            message += `📌 الحدث: ${title}\n`;
-            message += `🆔 حالة الـ ID: ${idStatus}\n`;
-            message += `📋 حالة جلب البيانات: ${menuStatus}\n`;
-            if (errorDetails) {
-                message += `⚠ تفاصيل العطل / السبب: ${errorDetails}\n`;
-            } else {
-                message += `✅ الحالة العامة: سليم بدون أخطاء\n`;
-            }
-            alert(message);
-        }
-
+        // ================= الهيدر والقوائم المساعدة =================
         function toggleSidebar() {
             const sidebar = document.getElementById('sideMenu');
             const overlay = document.getElementById('sidebarOverlay');
-            
             if (sidebar.classList.contains('translate-x-full')) {
                 sidebar.classList.remove('translate-x-full');
                 overlay.classList.remove('hidden');
@@ -1207,16 +755,13 @@
                     <div class="text-center mb-3">
                         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                     </div>
-
                     <div class="flex items-center justify-between mb-4">
                         <button onclick="toggleSidebar()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-sm transition-all cursor-pointer">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
-
                         ${userInfoHtml}
                     </div>
-
                     <div class="flex items-center gap-2">
                         <div class="flex-1 relative">
                             <input type="text" placeholder="ابحث" class="w-full bg-gray-50 border border-gray-200 text-gray-700 text-xs sm:text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm">
@@ -1235,41 +780,23 @@
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
-
             sidebarContainer.innerHTML = `<div class="text-center text-gray-400 text-xs py-4">جاري التحميل...</div>`;
 
             try {
-                const { data, error } = await supabaseClient.rpc('get_main_menu', {
-                    p_user_id: currentUserId
-                });
-
+                const { data, error } = await supabaseClient.rpc('get_main_menu', { p_user_id: currentUserId });
                 if (error) {
                     sidebarContainer.innerHTML = `<div class="text-center text-red-400 text-xs py-4">تعذر تحميل القائمة</div>`;
                     return;
                 }
-
-                let menuItems = [];
-                if (Array.isArray(data)) {
-                    menuItems = data;
-                } else if (typeof data === 'string') {
-                    try { menuItems = JSON.parse(data); } catch(e){}
-                }
-
+                let menuItems = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
                 if (menuItems && menuItems.length > 0) {
                     sidebarContainer.innerHTML = menuItems.map(item => {
                         let clickAction = `alert('${item}')`;
-                        
-                        if (item.includes('المستخدمون النشطون')) {
-                            clickAction = "renderActiveUsersScreen()";
-                        } else if (item.includes('سجل دخول المستخدمين')) {
-                            clickAction = "renderLoginHistoryScreen()";
-                        } else if (item.includes('تسجيل مندوب جديد')) {
-                            clickAction = "renderRegisterRepresentativeScreen()";
-                        } else if (item.includes('البيانات الشخصية')) {
-                            clickAction = "renderPersonalProfileScreen()";
-                        } else if (item.includes('بيانات المستخدمين')) {
-                            clickAction = "renderUserProfilesScreen()";
-                        }
+                        if (item.includes('المستخدمون النشطون')) clickAction = "renderActiveUsersScreen()";
+                        else if (item.includes('سجل دخول المستخدمين')) clickAction = "renderLoginHistoryScreen()";
+                        else if (item.includes('تسجيل مندوب جديد')) clickAction = "renderRegisterRepresentativeScreen()";
+                        else if (item.includes('البيانات الشخصية')) clickAction = "renderPersonalProfileScreen()";
+                        else if (item.includes('بيانات المستخدمين')) clickAction = "renderUserProfilesScreen()";
 
                         return `
                             <div onclick="${clickAction}" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3 rounded-xl cursor-pointer transition-all text-sm font-semibold text-gray-800 flex items-center justify-between">
@@ -1293,112 +820,61 @@
                         <div class="text-center mb-6">
                             <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 tracking-wide">Electricity</h1>
                         </div>
-
                         <div class="mb-6">
                             <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-40 sm:h-52 object-cover rounded-2xl shadow-md">
                         </div>
-
                         <div class="bg-gray-100 p-1.5 rounded-2xl flex items-center mb-6 border border-gray-200">
                             <button class="flex-1 bg-white text-blue-600 font-bold py-2.5 rounded-xl shadow-sm text-sm transition-all">تسجيل الدخول</button>
                             <button onclick="alert('شاشة إنشاء حساب')" class="flex-1 text-gray-500 font-semibold py-2.5 rounded-xl text-sm transition-all hover:text-gray-700">إنشاء حساب</button>
                         </div>
-
-                        <div id="loginFormContainer">
-                            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
-                                    <input type="text" id="loginPhone" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
+                        <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
+                                <input type="text" id="loginPhone" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
+                                <div class="relative">
+                                    <input type="password" id="loginPassword" required class="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
+                                    <button type="button" onclick="togglePasswordVisibility('loginPassword', 'loginEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
+                                        <svg id="loginEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                                    </button>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
-                                    <div class="relative">
-                                        <input type="password" id="loginPassword" required class="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
-                                        <button type="button" onclick="togglePasswordVisibility('loginPassword', 'loginEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
-                                            <svg id="loginEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                                    <label for="rememberMe" class="text-xs font-semibold text-gray-600 cursor-pointer">تذكرني</label>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">
-                                    تسجيل الدخول
-                                </button>
-                            </form>
-                        </div>
-                        <div class="relative my-6">
-                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
-                            <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div>
-                        </div>
-                        <div>
-                            <button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">
-                                الدخول كزائر
-                            </button>
-                        </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="rememberMe" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                                <label for="rememberMe" class="text-xs font-semibold text-gray-600 cursor-pointer">تذكرني</label>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm">تسجيل الدخول</button>
+                        </form>
+                        <div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div><div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400">أو</span></div></div>
+                        <div><button onclick="loginAsVisitor()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 rounded-xl transition-all text-sm border border-gray-200">الدخول كزائر</button></div>
                     </div>
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
-
-            if (localStorage.getItem('saved_phone')) {
-                const phoneInput = document.getElementById('loginPhone');
-                const passInput = document.getElementById('loginPassword');
-                const rememberCheckbox = document.getElementById('rememberMe');
-                if (phoneInput) phoneInput.value = localStorage.getItem('saved_phone');
-                if (passInput) passInput.value = localStorage.getItem('saved_password');
-                if (rememberCheckbox) rememberCheckbox.checked = true;
-            }
         }
 
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
-            const rememberMe = document.getElementById('rememberMe')?.checked;
 
-            if (rememberMe) {
-                localStorage.setItem('saved_phone', phone);
-                localStorage.setItem('saved_password', password);
-            } else {
-                localStorage.removeItem('saved_phone');
-                localStorage.removeItem('saved_password');
-            }
-
-            const { data, error } = await supabaseClient.rpc('login', { 
-                p_phone_number: phone, 
-                p_password: password 
-            });
-
+            const { data, error } = await supabaseClient.rpc('login', { p_phone_number: phone, p_password: password });
             if (error || !data || !data.id) {
-                showSystemAlert("خطأ في تسجيل الدخول", phone || "غير متوفر", "فشل التحقق", error?.message || "بيانات غير صحيحة");
+                alert("بيانات الدخول غير صحيحة");
                 return;
             }
 
             currentUserId = data.id; 
-
             try {
-                const profileRes = await supabaseClient.rpc('get_personal_profile', {
-                    p_user_id: currentUserId
-                });
+                const profileRes = await supabaseClient.rpc('get_personal_profile', { p_user_id: currentUserId });
                 if (profileRes.data && profileRes.data.success !== false) {
                     currentUserRole = profileRes.data.user_role || '';
                     currentUserName = profileRes.data.user_name || '';
                     currentUserPhone = profileRes.data.phone_number || '';
                 }
-            } catch (err) {
-                console.error("Error fetching user header profile:", err);
-            }
-
-            try {
-                await supabaseClient.rpc('update_last_active_at', {
-                    target_user_id: currentUserId
-                });
-            } catch (err) {
-                console.error("Instant heartbeat error:", err);
-            }
+            } catch (err) {}
 
             startHeartbeat();
             renderMainDashboard();
@@ -1419,12 +895,8 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex-1 overflow-y-auto space-y-4 px-1">
-                    <div class="mb-4">
-                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md">
-                    </div>
-                    <div id="partitionsContainer" class="space-y-3.5 pb-4">
-                        <div class="text-center text-gray-400 text-sm py-4">جاري تحميل الأقسام...</div>
-                    </div>
+                    <div class="mb-4"><img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80" alt="Banner" class="w-full h-36 sm:h-48 object-cover rounded-2xl shadow-md"></div>
+                    <div id="partitionsContainer" class="space-y-3.5 pb-4"><div class="text-center text-gray-400 text-sm py-4">جاري تحميل الأقسام...</div></div>
                 </div>
             `;
             document.getElementById('appContainer').innerHTML = html;
@@ -1432,245 +904,17 @@
 
             try {
                 const { data, error } = await supabaseClient.rpc('get_partitions');
-
-                if (error) {
-                    showSystemAlert("فشل جلب الأقسام", currentUserId || "غير معروف", "قاعدة البيانات", error.message);
-                    document.getElementById('partitionsContainer').innerHTML = `<div class="text-center text-red-400 text-sm py-4">تعذر تحميل الأقسام</div>`;
-                    return;
-                }
-
-                let partitionsList = [];
-                if (Array.isArray(data)) {
-                    partitionsList = data;
-                } else if (typeof data === 'string') {
-                    try { partitionsList = JSON.parse(data); } catch(e){}
-                }
-
+                let partitionsList = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : []);
                 const container = document.getElementById('partitionsContainer');
                 if (container && partitionsList && partitionsList.length > 0) {
-                    let partitionsHtml = partitionsList.map(name => {
-                        let clickAction = "";
-                        if (name.includes('قطع الغيار') || name.includes('شراء')) {
-                            clickAction = "renderPartsScreen()";
-                        } else {
-                            clickAction = `alert('قسم ${name}')`;
-                        }
-
-                        return `
-                            <div onclick="${clickAction}" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
-                                <span class="font-bold text-lg sm:text-xl" dir="auto">${name}</span>
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            </div>
-                        `;
-                    }).join('');
-
-                    container.innerHTML = partitionsHtml;
-                } else {
-                    container.innerHTML = `<div class="text-center text-gray-400 text-sm py-4">لا توجد أقسام متاحة</div>`;
-                }
-            } catch (err) {
-                showSystemAlert("استثناء غير متوقع", currentUserId || "غير معروف", "تنفيذ JavaScript", err.message);
-            }
-        }
-
-        async function renderBrandsScreen() {
-            let brands = [];
-            const { data, error } = await supabaseClient.from('brands').select('*');
-            
-            if (!error && data) {
-                brands = data.map(item => item.brand_name || item.name || Object.values(item)[1]); 
-            } else if (error) {
-                showSystemAlert("فشل جلب الماركات", currentUserId || "غير معروف", "جدول brands", error.message);
-            }
-
-            let brandsHtml = "";
-            if (brands.length > 0) {
-                brandsHtml = brands.map((brand, index) => {
-                    const style = getRotatingCardStyle(index);
-                    return `
-                        <div onclick="renderModelsScreen('${brand}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <span class="font-bold text-gray-800" dir="auto">${brand}</span>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    container.innerHTML = partitionsList.map(name => `
+                        <div onclick="alert('قسم ${name}')" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-5 sm:p-6 rounded-2xl shadow-md cursor-pointer transition-all flex items-center justify-between">
+                            <span class="font-bold text-lg sm:text-xl" dir="auto">${name}</span>
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         </div>
-                    `;
-                }).join('');
-            } else {
-                brandsHtml = `<div class="text-center text-gray-500 py-6">لا توجد ماركات متاحة حالياً</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر الماركة</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${brandsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderModelsScreen(brand) {
-            selectedBrand = brand;
-            let tableName = "";
-            let nameColumn = "device_name";
-            let codeColumn = "model_code";
-            let compatColumn = "screen_compatibility";
-            let batteryColumn = "battery_model";
-            
-            const b = brand.toLowerCase();
-            if (b.includes('samsung')) {
-                tableName = 'samsung_models'; nameColumn = 'samsung_phone_name'; codeColumn = 'samsung_phone_code'; compatColumn = 'samsung_screen_compatibility'; batteryColumn = 'samsung_battery_model';
-            } else if (b.includes('iphone') || b.includes('apple')) {
-                tableName = 'apple_models'; nameColumn = 'apple_phone_name'; codeColumn = 'apple_phone_code'; compatColumn = 'apple_screen_compatibility'; batteryColumn = 'apple_battery_model';
-            } else if (b.includes('xiaomi') || b.includes('poco')) {
-                tableName = 'xiaomi_models'; nameColumn = 'xiaomi_phone_name'; codeColumn = 'xiaomi_phone_code'; compatColumn = 'xiaomi_screen_compatibility'; batteryColumn = 'xiaomi_battery_model';
-            } else if (b.includes('redmi')) {
-                tableName = 'redmi_models'; nameColumn = 'redmi_phone_name'; codeColumn = 'redmi_phone_code'; compatColumn = 'redmi_screen_compatibility'; batteryColumn = 'redmi_battery_model';
-            } else if (b.includes('huawei')) {
-                tableName = 'huawei_models'; nameColumn = 'huawei_phone_name'; codeColumn = 'huawei_phone_code'; compatColumn = 'huawei_screen_compatibility'; batteryColumn = 'huawei_battery_model';
-            } else if (b.includes('honor')) {
-                tableName = 'honor_models'; nameColumn = 'honor_phone_name'; codeColumn = 'honor_phone_code'; compatColumn = 'honor_screen_compatibility'; batteryColumn = 'honor_battery_model';
-            } else if (b.includes('oppo')) {
-                tableName = 'oppo_models'; nameColumn = 'oppo_phone_name'; codeColumn = 'oppo_phone_code'; compatColumn = 'oppo_screen_compatibility'; batteryColumn = 'oppo_battery_model';
-            } else if (b.includes('realme')) {
-                tableName = 'realme_models'; nameColumn = 'realme_phone_name'; compatColumn = 'realme_screen_compatibility'; batteryColumn = 'realme_battery_model';
-            } else if (b.includes('itel')) {
-                tableName = 'itel_models'; nameColumn = 'itel_phone_name'; codeColumn = 'itel_phone_code'; compatColumn = 'itel_screen_compatibility'; batteryColumn = 'itel_battery_model';
-            } else if (b.includes('nokia')) {
-                tableName = 'nokia_models'; nameColumn = 'nokia_phone_name'; codeColumn = 'nokia_phone_code'; compatColumn = 'nokia_screen_compatibility'; batteryColumn = 'nokia_battery_model';
-            } else if (b.includes('vivo')) {
-                tableName = 'vivo_models'; nameColumn = 'vivo_phone_name'; codeColumn = 'vivo_phone_code'; compatColumn = 'vivo_screen_compatibility'; batteryColumn = 'vivo_battery_model';
-            } else if (b.includes('techno') || b.includes('tecno')) {
-                tableName = 'tecno_models'; nameColumn = 'tecno_phone_name'; codeColumn = 'tecno_phone_code'; compatColumn = 'tecno_screen_compatibility'; batteryColumn = 'tecno_battery_model';
-            } else if (b.includes('infinix')) {
-                tableName = 'infinix_models'; nameColumn = 'infinix_phone_name'; codeColumn = 'infinix_phone_code'; compatColumn = 'infinix_screen_compatibility'; batteryColumn = 'infinix_battery_model';
-            }
-
-            let models = [];
-            if (tableName) {
-                const { data, error } = await supabaseClient.from(tableName).select('*').order('id', { ascending: true });
-                if (!error && data) {
-                    models = data.map(item => ({
-                        device_name: item[nameColumn] || item['device_name'],
-                        model_code: item[codeColumn] || item['model_code'],
-                        screen_compatibility: item[compatColumn] || item['screen_compatibility'] || null,
-                        battery_model: item[batteryColumn] || item['battery_model'] || null
-                    }));
+                    `).join('');
                 }
-            }
-
-            let modelsHtml = "";
-            if (models.length > 0) {
-                modelsHtml = models.map((m, index) => {
-                    const style = getRotatingCardStyle(index);
-                    const escapedCompat = m.screen_compatibility ? encodeURIComponent(m.screen_compatibility) : '';
-                    const escapedBattery = m.battery_model ? encodeURIComponent(m.battery_model) : '';
-                    const escapedCode = m.model_code ? encodeURIComponent(m.model_code) : '';
-                    return `
-                        <div onclick="renderPartsScreen('${m.device_name}', '${escapedCode}', '${escapedCompat}', '${escapedBattery}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <div class="text-right">
-                                <span class="font-bold text-gray-800 block" dir="auto">${m.device_name}</span>
-                                ${m.model_code ? `<span class="text-xs text-gray-500 block mt-0.5" dir="auto">الكود: ${m.model_code}</span>` : ''}
-                            </div>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                modelsHtml = `<div class="text-center text-gray-500 py-6">لا توجد موديلات متاحة</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">اختر موديل (${brand})</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${modelsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderPartsScreen(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
-            selectedModel = modelName;
-            selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
-            currentScreenCompatibility = screenCompat ? decodeURIComponent(screenCompat) : '';
-            currentBatteryModel = batteryModel ? decodeURIComponent(batteryModel) : '';
-
-            document.getElementById('appContainer').innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
-                </div>
-                <div class="flex-1 flex items-center justify-center">
-                    <p class="text-gray-500 text-sm">جاري جلب قطع الغيار من قاعدة البيانات...</p>
-                </div>
-            `;
-
-            let sparePartsList = [];
-            try {
-                const { data, error } = await supabaseClient.rpc('get_spare_parts');
-
-                if (error) {
-                    showSystemAlert("فشل جلب قطع الغيار", currentUserId || "غير معروف", "دالة get_spare_parts", error.message);
-                } else if (data) {
-                    sparePartsList = data;
-                }
-            } catch (err) {
-                showSystemAlert("استثناء في جلب قطع الغيار", currentUserId || "غير معروف", "تنفيذ RPC", err.message);
-            }
-
-            let partsHtml = "";
-            if (sparePartsList.length > 0) {
-                partsHtml = sparePartsList.map((part, index) => {
-                    const style = getRotatingCardStyle(index);
-                    return `
-                        <div onclick="renderPartDetails('${part}')" class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer transition-all text-sm sm:text-base group">
-                            <span class="font-bold text-gray-800 text-right flex-1 ml-3" dir="auto">${part}</span>
-                            <svg class="w-5 h-5 ${style.icon} flex-shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                partsHtml = `<div class="text-center text-gray-500 py-6">لا توجد قطع غيار متاحة في الجدول حالياً</div>`;
-            }
-
-            const html = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
-                        <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        <span>رجوع</span>
-                    </button>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">قائمة قطع الغيار</h2>
-                </div>
-                <div class="flex-1 overflow-y-auto space-y-3 p-1">
-                    ${partsHtml}
-                </div>
-            `;
-            document.getElementById('appContainer').innerHTML = html;
-            loadDynamicMenuIntoSidebar();
-        }
-
-        async function renderPartDetails(part) {
-            selectedPart = part;
-            alert(`تفاصيل القطعة: ${part}`);
+            } catch (err) {}
         }
 
         window.onload = function() {
