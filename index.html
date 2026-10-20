@@ -208,21 +208,21 @@
             }
         }
 
-        // إرسال البيانات لدالة الـ RPC الخاصة بتسجيل المندوب
+        // إرسال البيانات لدالة الـ RPC الخاصة بتسجيل المندوب بالأسماء الصحيحة المطابقة لقاعدة البيانات
         async function handleRegisterRepresentative(e) {
             e.preventDefault();
 
             try {
                 const { data, error } = await supabaseClient.rpc('register_representative', {
-                    p_admin_user_id: currentUserId,
+                    p_user_id: currentUserId,
                     p_user_name: document.getElementById('repName').value.trim(),
                     p_delivery_city: document.getElementById('repCity').value,
                     p_delivery_region: document.getElementById('repRegion').value,
                     p_delivery_area: document.getElementById('repArea').value,
-                    p_phone_number: document.getElementById('repPhone').value.trim(),
-                    p_whatsapp_number: document.getElementById('repWhatsapp').value.trim(),
-                    p_gmail: document.getElementById('repGmail').value.trim(),
-                    p_password: document.getElementById('repPassword').value.trim()
+                    number_phone: document.getElementById('repPhone').value.trim(),
+                    whatsapp_name: document.getElementById('repWhatsapp').value.trim(),
+                    gmail: document.getElementById('repGmail').value.trim(),
+                    password: document.getElementById('repPassword').value.trim()
                 });
 
                 if (error) {
