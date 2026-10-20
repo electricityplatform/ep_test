@@ -49,6 +49,10 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let currentUserId = null;
+        let currentUserRole = "";
+        let currentUserName = "";
+        let currentUserPhone = "";
+
         let selectedBrand = "";
         let selectedModel = "";
         let selectedPart = "";
@@ -141,7 +145,6 @@
                     return;
                 }
 
-                // التسميات العربية الدقيقة لكل عمود
                 const fieldLabels = {
                     user_role: "الرتبة",
                     user_name: "الاسم",
@@ -300,7 +303,6 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        // تحديث مناطق التوصيل بناءً على المحافظة المختارة
         function updateRegionsList() {
             const city = document.getElementById('repCity').value;
             const regionSelect = document.getElementById('repRegion');
@@ -318,7 +320,6 @@
             }
         }
 
-        // تحديث نطاق التوصيل بناءً على المنطقة المختارة
         function updateAreasList() {
             const region = document.getElementById('repRegion').value;
             const areaSelect = document.getElementById('repArea');
@@ -334,7 +335,6 @@
             }
         }
 
-        // إرسال البيانات لدالة الـ RPC الخاصة بتسجيل المندوب بالأسماء الدقيقة لقاعدة البيانات
         async function handleRegisterRepresentative(e) {
             e.preventDefault();
 
@@ -368,7 +368,6 @@
             }
         }
 
-        // ================= دالة عرض شاشة بيانات المستخدمين =================
         async function renderUserProfileMenuScreen() {
             toggleSidebar();
 
@@ -459,7 +458,6 @@
             }
         }
 
-        // ================= دالة عرض شاشة سجل دخول المستخدمين =================
         async function renderLoginHistoryScreen() {
             toggleSidebar();
 
@@ -623,7 +621,6 @@
             }
         }
 
-        // ================= دالة عرض شاشة المستخدمين النشطين =================
         async function renderActiveUsersScreen() {
             toggleSidebar();
 
@@ -766,7 +763,18 @@
             return { bg: "bg-gray-50 hover:bg-blue-50/60", border: "border-gray-200 hover:border-blue-200", text: "text-gray-800", icon: "text-gray-400 group-hover:text-blue-500" };
         }
 
+        // ================= قالب الهيدر (مع عرض الرتبة والاسم ورقم الهاتف فوق على الشمال) =================
         function getHeaderTemplate() {
+            const userInfoHtml = currentUserId && currentUserName ? `
+                <div class="flex items-center gap-1.5 bg-blue-50/80 border border-blue-200 px-3 py-1.5 rounded-xl shadow-sm text-xs" dir="auto">
+                    <span class="font-bold text-blue-700">${currentUserRole || ''}</span>
+                    <span class="text-gray-300">|</span>
+                    <span class="font-semibold text-gray-800">${currentUserName}</span>
+                    <span class="text-gray-300">|</span>
+                    <span class="font-mono text-gray-600" dir="ltr">${currentUserPhone || ''}</span>
+                </div>
+            ` : '';
+
             return `
                 <div class="border-b border-gray-100 pb-4 mb-4 flex-shrink-0">
                     <div class="text-center mb-3">
@@ -778,6 +786,9 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             <span>القائمة</span>
                         </button>
+
+                        <!-- عرض بيانات المستخدم الحالي فوق على الشمال -->
+                        ${userInfoHtml}
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -915,7 +926,7 @@
             }
         }
 
-        // ================= 3. دالة تسجيل الدخول (مع إرسال نبضة فورية) =================
+        // ================= 3. دالة تسجيل الدخول (مع جلب البيانات الشخصية فوراً) =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
@@ -942,6 +953,20 @@
 
             currentUserId = data.id; 
 
+            // جلب البيانات الشخصية للمستخدم فوراً لتخزينها في المتغيرات وعرضها بالهيدر
+            try {
+                const profileRes = await supabaseClient.rpc('get_personal_profile', {
+                    p_user_id: currentUserId
+                });
+                if (profileRes.data && profileRes.data.success !== false) {
+                    currentUserRole = profileRes.data.user_role || '';
+                    currentUserName = profileRes.data.user_name || '';
+                    currentUserPhone = profileRes.data.phone_number || '';
+                }
+            } catch (err) {
+                console.error("Error fetching user header profile:", err);
+            }
+
             try {
                 await supabaseClient.rpc('update_last_active_at', {
                     target_user_id: currentUserId
@@ -958,6 +983,9 @@
 
         function loginAsVisitor() {
             currentUserId = null;
+            currentUserRole = "";
+            currentUserName = "";
+            currentUserPhone = "";
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             renderMainDashboard();
             loadDynamicMenuIntoSidebar();
