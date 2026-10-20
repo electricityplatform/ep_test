@@ -221,18 +221,18 @@
                     user_role: "الرتبة",
                     user_name: "الاسم",
                     store_name: "اسم المتجر",
-                    store_address: "عنوان المتجر",
-                    store_area: "نطاق المتجر",
+                    store_city: "محافظة المتجر",
                     store_region: "منطقة المتجر",
-                    store_city: "المحافظة",
+                    store_area: "نطاق المتجر",
+                    store_address: "عنوان المتجر",
                     shop_name: "اسم المحل",
-                    shop_address: "عنوان المحل",
-                    shop_area: "نطاق المحل",
+                    shop_city: "محافظة المحل",
                     shop_region: "منطقة المحل",
-                    shop_city: "المحافظة",
-                    delivery_area: "نطاق التوصيل",
+                    shop_area: "نطاق المحل",
+                    shop_address: "عنوان المحل",
+                    delivery_city: "محافظة التوصيل",
                     delivery_region: "منطقة التوصيل",
-                    delivery_city: "المحافظة",
+                    delivery_area: "نطاق التوصيل",
                     phone_number: "رقم الهاتف",
                     whatsapp_number: "رقم الواتساب",
                     gmail: "البريد الإلكترونى",
@@ -245,19 +245,20 @@
 
                 if (role === 'أدمن' || role === 'admin') {
                     orderedKeys = [
-                        'user_role', 'user_name', 'store_name', 'store_address', 'store_area', 'store_region', 'store_city',
-                        'shop_name', 'shop_address', 'shop_area', 'shop_region', 'shop_city',
-                        'delivery_area', 'delivery_region', 'delivery_city',
+                        'user_role', 'user_name', 
+                        'store_name', 'store_city', 'store_region', 'store_area', 'store_address',
+                        'shop_name', 'shop_city', 'shop_region', 'shop_area', 'shop_address',
+                        'delivery_city', 'delivery_region', 'delivery_area',
                         'phone_number', 'whatsapp_number', 'gmail', 'password'
                     ];
                 } else if (role === 'مدير' || role === 'head' || role === 'manager') {
                     orderedKeys = ['user_role', 'user_name', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
                 } else if (role === 'مندوب' || role === 'rep') {
-                    orderedKeys = ['user_role', 'user_name', 'delivery_area', 'delivery_region', 'delivery_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                    orderedKeys = ['user_role', 'user_name', 'delivery_city', 'delivery_region', 'delivery_area', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
                 } else if (role === 'تاجر' || role === 'merchant' || role === 'trader') {
-                    orderedKeys = ['user_role', 'user_name', 'store_name', 'store_address', 'store_region', 'store_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                    orderedKeys = ['user_role', 'user_name', 'store_name', 'store_city', 'store_region', 'store_area', 'store_address', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
                 } else if (role === 'فنى' || role === 'فني' || role === 'tech' || role === 'technician') {
-                    orderedKeys = ['user_role', 'user_name', 'shop_name', 'shop_address', 'shop_region', 'shop_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                    orderedKeys = ['user_role', 'user_name', 'shop_name', 'shop_city', 'shop_region', 'shop_area', 'shop_address', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
                 } else {
                     orderedKeys = Object.keys(profileData);
                 }
@@ -287,7 +288,7 @@
 
                     profileContainer.innerHTML = contentHtml;
                 } else {
-                    // ----- وضع التعديل (Edit Form مع القوائم المنسدلة للبلدان والمناطق) -----
+                    // ----- وضع التعديل (Edit Form) -----
                     let formFieldsHtml = orderedKeys
                         .filter(key => profileData.hasOwnProperty(key))
                         .map(key => {
@@ -296,7 +297,7 @@
                             const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
                             const isReadOnly = (key === 'user_role');
 
-                            // التعامل الخاص القوائم المنسدلة (المحافظات)
+                            // 1. المحافظة (store_city / shop_city / delivery_city)
                             if (key === 'store_city' || key === 'shop_city' || key === 'delivery_city') {
                                 const prefix = key.replace('_city', '');
                                 return `
@@ -313,7 +314,7 @@
                                 `;
                             }
 
-                            // التعامل الخاص القوائم المنسدلة (المناطق)
+                            // 2. المنطقة (store_region / shop_region / delivery_region)
                             if (key === 'store_region' || key === 'shop_region' || key === 'delivery_region') {
                                 const prefix = key.replace('_region', '');
                                 const parentCity = profileData[`${prefix}_city`] || '';
@@ -334,7 +335,7 @@
                                 `;
                             }
 
-                            // التعامل الخاص القوائم المنسدلة (النطاق)
+                            // 3. النطاق (store_area / shop_area / delivery_area)
                             if (key === 'store_area' || key === 'shop_area' || key === 'delivery_area') {
                                 const prefix = key.replace('_area', '');
                                 const parentRegion = profileData[`${prefix}_region`] || '';
@@ -354,7 +355,7 @@
                                 `;
                             }
 
-                            // التعامل الخاص برمز المرور مع العين
+                            // 4. رمز المرور مع العين
                             if (key === 'password') {
                                 return `
                                     <div class="w-full space-y-1">
@@ -379,7 +380,7 @@
 
                             return `
                                 <div class="w-full space-y-1">
-                                    <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label} ${isReadOnly ? '(غير قابل للتعديل)' : ''}</label>
+                                    <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
                                     <input 
                                         type="${key === 'gmail' ? 'email' : 'text'}" 
                                         id="edit_${key}" 
@@ -420,18 +421,18 @@
                     p_user_id: currentUserId,
                     p_user_name: getVal('user_name'),
                     p_store_name: getVal('store_name'),
-                    p_store_address: getVal('store_address'),
-                    p_store_area: getVal('store_area'),
-                    p_store_region: getVal('store_region'),
                     p_store_city: getVal('store_city'),
+                    p_store_region: getVal('store_region'),
+                    p_store_area: getVal('store_area'),
+                    p_store_address: getVal('store_address'),
                     p_shop_name: getVal('shop_name'),
-                    p_shop_address: getVal('shop_address'),
-                    p_shop_area: getVal('shop_area'),
-                    p_shop_region: getVal('shop_region'),
                     p_shop_city: getVal('shop_city'),
-                    p_delivery_area: getVal('delivery_area'),
-                    p_delivery_region: getVal('delivery_region'),
+                    p_shop_region: getVal('shop_region'),
+                    p_shop_area: getVal('shop_area'),
+                    p_shop_address: getVal('shop_address'),
                     p_delivery_city: getVal('delivery_city'),
+                    p_delivery_region: getVal('delivery_region'),
+                    p_delivery_area: getVal('delivery_area'),
                     p_phone_number: getVal('phone_number'),
                     p_whatsapp_number: getVal('whatsapp_number'),
                     p_gmail: getVal('gmail'),
@@ -482,55 +483,55 @@
                     <form onsubmit="handleRegisterRepresentative(event)" class="space-y-4 max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                         
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">الرتبة (تلقائي)</label>
-                            <input type="text" value="مندوب" disabled class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 text-sm font-bold" dir="auto">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">الرتبة</label>
+                            <input type="text" value="مندوب" disabled class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 text-sm font-bold text-center" dir="auto">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
-                            <input type="text" id="repName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="auto" placeholder="ادخل اسم المندوب">
+                            <input type="text" id="repName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="auto" placeholder="ادخل اسم المندوب">
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1">المحافظة</label>
-                            <select id="repCity" onchange="updateRegionsDropdown('repCity', 'repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">محافظة التوصيل</label>
+                            <select id="repCity" onchange="updateRegionsDropdown('repCity', 'repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
                                 ${getGovernoratesOptionsHtml()}
                             </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">منطقة التوصيل</label>
-                            <select id="repRegion" onchange="updateAreasDropdown('repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                            <select id="repRegion" onchange="updateAreasDropdown('repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
                                 <option value="">اختر المحافظة أولاً...</option>
                             </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">نطاق التوصيل</label>
-                            <select id="repArea" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                            <select id="repArea" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center cursor-pointer">
                                 <option value="">اختر منطقة التوصيل أولاً...</option>
                             </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
-                            <input type="text" id="repPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
+                            <input type="text" id="repPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="01xxxxxxxxx">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الواتساب</label>
-                            <input type="text" id="repWhatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
+                            <input type="text" id="repWhatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="01xxxxxxxxx">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">البريد الإلكترونى</label>
-                            <input type="email" id="repGmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="example@gmail.com">
+                            <input type="email" id="repGmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="example@gmail.com">
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
                             <div class="relative">
-                                <input type="password" id="repPassword" required class="w-full px-4 py-2.5 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="••••••••">
+                                <input type="password" id="repPassword" required class="w-full px-4 py-2.5 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 text-center" dir="ltr" placeholder="••••••••">
                                 <button type="button" onclick="togglePasswordVisibility('repPassword', 'repEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
                                     <svg id="repEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
