@@ -197,20 +197,52 @@
                 if (profilesList.length > 0) {
                     tableContainer.innerHTML = `
                         <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                            <table class="w-full text-right text-xs sm:text-sm">
+                            <table class="w-full text-right text-xs sm:text-sm whitespace-nowrap">
                                 <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
                                     <tr>
                                         <th class="p-3.5 font-bold">الرتبة</th>
                                         <th class="p-3.5 font-bold">الاسم</th>
+                                        <th class="p-3.5 font-bold">اسم المتجر</th>
+                                        <th class="p-3.5 font-bold">محافظة المتجر</th>
+                                        <th class="p-3.5 font-bold">منطقة المتجر</th>
+                                        <th class="p-3.5 font-bold">نطاق المتجر</th>
+                                        <th class="p-3.5 font-bold">عنوان المتجر</th>
+                                        <th class="p-3.5 font-bold">اسم المحل</th>
+                                        <th class="p-3.5 font-bold">محافظة المحل</th>
+                                        <th class="p-3.5 font-bold">منطقة المحل</th>
+                                        <th class="p-3.5 font-bold">نطاق المحل</th>
+                                        <th class="p-3.5 font-bold">عنوان المحل</th>
+                                        <th class="p-3.5 font-bold">محافظة التوصيل</th>
+                                        <th class="p-3.5 font-bold">منطقة التوصيل</th>
+                                        <th class="p-3.5 font-bold">نطاق التوصيل</th>
                                         <th class="p-3.5 font-bold">رقم الهاتف</th>
+                                        <th class="p-3.5 font-bold">رقم الواتساب</th>
+                                        <th class="p-3.5 font-bold">البريد الإلكترونى</th>
+                                        <th class="p-3.5 font-bold">رمز المرور</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 bg-white">
                                     ${profilesList.map(user => `
                                         <tr class="hover:bg-blue-50/50 transition-all">
                                             <td class="p-3.5 font-bold text-blue-600" dir="auto">${user.user_role || '---'}</td>
-                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || 'بدون اسم'}</td>
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_address || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_address || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_area || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.whatsapp_number || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.gmail || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.password || '---'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
