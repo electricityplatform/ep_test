@@ -335,22 +335,18 @@
                                 `;
                             }
 
-                            // 3. النطاق (store_area / shop_area / delivery_area)
+                            // 3. النطاق (store_area / shop_area / delivery_area) - جعلها رمادية وغير قابلة للتعديل
                             if (key === 'store_area' || key === 'shop_area' || key === 'delivery_area') {
-                                const prefix = key.replace('_area', '');
-                                const parentRegion = profileData[`${prefix}_region`] || '';
-                                const areas = getAreasListForRegion(parentRegion);
-
                                 return `
                                     <div class="w-full space-y-1">
-                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
-                                        <select 
+                                        <label class="block text-xs font-semibold text-gray-500 text-right pr-2">${label}</label>
+                                        <input 
+                                            type="text" 
                                             id="edit_${key}" 
-                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
+                                            value="${value || 'غير متوفر'}" 
+                                            disabled 
+                                            class="w-full bg-gray-200 text-gray-500 border border-gray-300 text-sm font-bold rounded-2xl px-4 py-3.5 shadow-sm text-center cursor-not-allowed"
                                         >
-                                            <option value="">اختر النطاق...</option>
-                                            ${areas.map(a => `<option value="${a}" ${a === value ? 'selected' : ''}>${a}</option>`).join('')}
-                                        </select>
                                     </div>
                                 `;
                             }
