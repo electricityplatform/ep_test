@@ -153,6 +153,79 @@
             }, 10000);
         }
 
+        // ================= دالة عرض شاشة بيانات المستخدمين (get_user_profiles) =================
+        async function renderUserProfilesScreen() {
+            toggleSidebar();
+
+            const container = document.getElementById('appContainer');
+            container.innerHTML = `
+                ${getHeaderTemplate()}
+                <div class="flex items-center justify-between mb-4 flex-shrink-0">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            <span>رجوع</span>
+                        </button>
+                    </div>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">بيانات المستخدمين</h2>
+                </div>
+                <div id="userProfilesTableContainer" class="flex-1 overflow-y-auto p-1">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب بيانات المستخدمين...</div>
+                </div>
+            `;
+
+            loadDynamicMenuIntoSidebar();
+
+            const tableContainer = document.getElementById('userProfilesTableContainer');
+            try {
+                const { data, error } = await supabaseClient.rpc('get_user_profiles', {
+                    p_user_id: currentUserId
+                });
+
+                if (error) {
+                    tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">خطأ في جلب البيانات: ${error.message}</div>`;
+                    return;
+                }
+
+                let profilesList = [];
+                if (Array.isArray(data)) {
+                    profilesList = data;
+                } else if (typeof data === 'string') {
+                    try { profilesList = JSON.parse(data); } catch(e){}
+                }
+
+                if (profilesList.length > 0) {
+                    tableContainer.innerHTML = `
+                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+                            <table class="w-full text-right text-xs sm:text-sm">
+                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-3.5 font-bold">الرتبة</th>
+                                        <th class="p-3.5 font-bold">الاسم</th>
+                                        <th class="p-3.5 font-bold">رقم الهاتف</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 bg-white">
+                                    ${profilesList.map(user => `
+                                        <tr class="hover:bg-blue-50/50 transition-all">
+                                            <td class="p-3.5 font-bold text-blue-600" dir="auto">${user.user_role || '---'}</td>
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || 'بدون اسم'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    tableContainer.innerHTML = `<div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">لا توجد بيانات متاحة</div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
+            }
+        }
+
         // ================= دالة عرض شاشة البيانات الشخصية (عرض / تعديل) =================
         async function renderPersonalProfileScreen(isEditMode = false) {
             if (document.getElementById('sideMenu') && !document.getElementById('sideMenu').classList.contains('translate-x-full')) {
@@ -616,156 +689,6 @@
             }
         }
 
-        // ================= شاشة وعرض بيانات المستخدمين الشاملة (للأدمن والمدير) =================
-        async function renderUserProfilesScreen() {
-            toggleSidebar();
-
-            const container = document.getElementById('appContainer');
-            container.innerHTML = `
-                ${getHeaderTemplate()}
-                <div class="flex items-center justify-between mb-4 flex-shrink-0 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
-                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                            <span>رجوع</span>
-                        </button>
-                        <button type="button" onclick="event.stopPropagation(); fetchAndDisplayUserProfiles();" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 border border-blue-200 cursor-pointer" title="تحديث البيانات">
-                            <svg class="w-4 h-4 transform transition-transform hover:rotate-180 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>تحديث</span>
-                        </button>
-                    </div>
-                    <h2 id="userProfilesTitle" class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        بيانات المستخدمين الشاملة
-                    </h2>
-                </div>
-                <div id="userProfilesTableContainer" class="flex-1 overflow-y-auto p-1">
-                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب البيانات...</div>
-                </div>
-            `;
-
-            loadDynamicMenuIntoSidebar();
-            await fetchAndDisplayUserProfiles();
-        }
-
-        async function fetchAndDisplayUserProfiles() {
-            const tableContainer = document.getElementById('userProfilesTableContainer');
-            const titleElement = document.getElementById('userProfilesTitle');
-            
-            if (tableContainer) {
-                tableContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري تحديث البيانات...</div>`;
-            }
-
-            try {
-                const { data, error } = await supabaseClient.rpc('get_user_profiles', {
-                    p_user_id: currentUserId
-                });
-
-                if (error) {
-                    showSystemAlert("خطأ في جلب بيانات المستخدمين", currentUserId || "غير معروف", "get_user_profiles", error.message);
-                    if (tableContainer) tableContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
-                    return;
-                }
-
-                if (data && data.success === false) {
-                    if (tableContainer) {
-                        tableContainer.innerHTML = `
-                            <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
-                                <p class="font-semibold">${data.message || 'عفواً، ليس لديك الصلاحية لعرض هذه البيانات'}</p>
-                            </div>
-                        `;
-                    }
-                    return;
-                }
-
-                let profilesList = [];
-                if (Array.isArray(data)) {
-                    profilesList = data;
-                } else if (typeof data === 'string') {
-                    try { profilesList = JSON.parse(data); } catch(e){}
-                }
-
-                if (titleElement) {
-                    titleElement.innerHTML = `
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        بيانات المستخدمين الشاملة (${profilesList.length})
-                    `;
-                }
-
-                let contentHtml = "";
-                if (profilesList.length > 0) {
-                    contentHtml = `
-                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-                            <table class="w-full text-right text-xs sm:text-sm">
-                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
-                                    <tr>
-                                        <th class="p-3.5 font-bold">الرتبة</th>
-                                        <th class="p-3.5 font-bold">الاسم</th>
-                                        <th class="p-3.5 font-bold">رقم الهاتف</th>
-                                        <th class="p-3.5 font-bold">الواتساب</th>
-                                        <th class="p-3.5 font-bold">البريد الإلكترونى</th>
-                                        <th class="p-3.5 font-bold">رمز المرور</th>
-                                        <th class="p-3.5 font-bold">اسم المتجر</th>
-                                        <th class="p-3.5 font-bold">محافظة المتجر</th>
-                                        <th class="p-3.5 font-bold">منطقة المتجر</th>
-                                        <th class="p-3.5 font-bold">نطاق المتجر</th>
-                                        <th class="p-3.5 font-bold">عنوان المتجر</th>
-                                        <th class="p-3.5 font-bold">اسم المحل</th>
-                                        <th class="p-3.5 font-bold">محافظة المحل</th>
-                                        <th class="p-3.5 font-bold">منطقة المحل</th>
-                                        <th class="p-3.5 font-bold">نطاق المحل</th>
-                                        <th class="p-3.5 font-bold">عنوان المحل</th>
-                                        <th class="p-3.5 font-bold">محافظة التوصيل</th>
-                                        <th class="p-3.5 font-bold">منطقة التوصيل</th>
-                                        <th class="p-3.5 font-bold">نطاق التوصيل</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 bg-white">
-                                    ${profilesList.map(p => `
-                                        <tr class="hover:bg-blue-50/50 transition-all">
-                                            <td class="p-3.5 whitespace-nowrap">
-                                                <span class="px-2.5 py-1 rounded-full text-xs font-bold ${ (p.user_role === 'admin' \vert{}\vert{} p.user_role === 'أدمن') ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600' }" dir="auto">${p.user_role || '---'}</span>
-                                            </td>
-                                            <td class="p-3.5 font-semibold text-gray-800 whitespace-nowrap" dir="auto">${p.user_name || '---'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600 whitespace-nowrap" dir="ltr">${p.phone_number || '---'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600 whitespace-nowrap" dir="ltr">${p.whatsapp_number || '---'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600 whitespace-nowrap" dir="ltr">${p.gmail || '---'}</td>
-                                            <td class="p-3.5 font-mono text-gray-600 whitespace-nowrap" dir="ltr">${p.password || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.store_name || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.store_city || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.store_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.store_area || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.store_address || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.shop_name || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.shop_city || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.shop_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.shop_area || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.shop_address || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.delivery_city || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.delivery_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700 whitespace-nowrap" dir="auto">${p.delivery_area || '---'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                } else {
-                    contentHtml = `
-                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                            <p class="font-semibold">لا توجد بيانات مسجلة حالياً</p>
-                        </div>
-                    `;
-                }
-
-                if (tableContainer) {
-                    tableContainer.innerHTML = contentHtml;
-                }
-            } catch (err) {
-                console.error("Error fetching user profiles:", err);
-            }
-        }
-
         async function renderLoginHistoryScreen() {
             toggleSidebar();
 
@@ -1112,7 +1035,7 @@
             `;
         }
 
-        // ================= 2. دالة جلب المنيو الرئيسية =================
+        // ================= 2. دالة جلب المنيو الرئيسية (ديناميكية كما هي) =================
         async function loadDynamicMenuIntoSidebar() {
             const sidebarContainer = document.getElementById('sidebarContent');
             if (!sidebarContainer) return;
@@ -1144,12 +1067,12 @@
                             clickAction = "renderActiveUsersScreen()";
                         } else if (item.includes('سجل دخول المستخدمين')) {
                             clickAction = "renderLoginHistoryScreen()";
-                        } else if (item.includes('بيانات المستخدمين')) {
-                            clickAction = "renderUserProfilesScreen()";
                         } else if (item.includes('تسجيل مندوب جديد')) {
                             clickAction = "renderRegisterRepresentativeScreen()";
                         } else if (item.includes('البيانات الشخصية')) {
                             clickAction = "renderPersonalProfileScreen()";
+                        } else if (item.includes('بيانات المستخدمين')) {
+                            clickAction = "renderUserProfilesScreen()";
                         }
 
                         return `
@@ -1342,7 +1265,7 @@
                     let partitionsHtml = partitionsList.map(name => {
                         let clickAction = "";
                         if (name.includes('قطع الغيار') || name.includes('شراء')) {
-                            clickAction = "renderBrandsScreen()";
+                            clickAction = "renderPartsScreen()";
                         } else {
                             clickAction = `alert('قسم ${name}')`;
                         }
@@ -1504,7 +1427,7 @@
             document.getElementById('appContainer').innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
@@ -1546,7 +1469,7 @@
             const html = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button onclick="renderBrandsScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
+                    <button onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5">
                         <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                         <span>رجوع</span>
                     </button>
