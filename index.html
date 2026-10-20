@@ -78,39 +78,48 @@
             }, 10000);
         }
 
-        // ================= دالة عرض شاشة البيانات الشخصية =================
-        async function renderPersonalProfileScreen() {
-            toggleSidebar();
+        // ================= دالة عرض شاشة البيانات الشخصية (عرض / تعديل) =================
+        async function renderPersonalProfileScreen(isEditMode = false) {
+            if (document.getElementById('sideMenu') && !document.getElementById('sideMenu').classList.contains('translate-x-full')) {
+                toggleSidebar();
+            }
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-4 flex-shrink-0 flex-wrap gap-2">
                     <div class="flex items-center gap-2">
-                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 cursor-pointer">
+                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
                             <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                             <span>رجوع</span>
                         </button>
-                        <button type="button" onclick="event.stopPropagation(); fetchAndDisplayPersonalProfile();" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 border border-blue-200 cursor-pointer" title="تحديث البيانات">
-                            <svg class="w-4 h-4 transform transition-transform hover:rotate-180 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            <span>تحديث</span>
-                        </button>
+                        
+                        ${!isEditMode ? `
+                            <button type="button" onclick="renderPersonalProfileScreen(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+                                <span>تعديل البيانات</span>
+                            </button>
+                        ` : `
+                            <button type="button" onclick="renderPersonalProfileScreen(false)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
+                                <span>إلغاء التعديل</span>
+                            </button>
+                        `}
                     </div>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
-                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                        البيانات الشخصية
+                    <h2 class="text-base sm:text-lg font-bold text-gray-800">
+                        ${isEditMode ? 'تعديل البيانات الشخصية' : 'البيانات الشخصية'}
                     </h2>
                 </div>
-                <div id="personalProfileContainer" class="flex-1 overflow-y-auto p-1 space-y-3">
-                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب البيانات الشخصية...</div>
+
+                <div id="personalProfileContainer" class="flex-1 overflow-y-auto p-1 max-w-xl mx-auto w-full space-y-4">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب البيانات...</div>
                 </div>
             `;
 
             loadDynamicMenuIntoSidebar();
-            await fetchAndDisplayPersonalProfile();
+            await fetchAndDisplayPersonalProfile(isEditMode);
         }
 
-        async function fetchAndDisplayPersonalProfile() {
+        // ================= دالة جلب وعرض/تعديل البيانات الشخصية =================
+        async function fetchAndDisplayPersonalProfile(isEditMode = false) {
             const profileContainer = document.getElementById('personalProfileContainer');
             if (!profileContainer) return;
 
@@ -123,25 +132,13 @@
                 return;
             }
 
-            profileContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري التحديث...</div>`;
-
             try {
                 const { data, error } = await supabaseClient.rpc('get_personal_profile', {
                     p_user_id: currentUserId
                 });
 
-                if (error) {
-                    showSystemAlert("خطأ في جلب البيانات الشخصية", currentUserId, "get_personal_profile", error.message);
+                if (error || (data && data.success === false)) {
                     profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
-                    return;
-                }
-
-                if (data && data.success === false) {
-                    profileContainer.innerHTML = `
-                        <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
-                            <p class="font-semibold">${data.message || 'المستخدم غير موجود'}</p>
-                        </div>
-                    `;
                     return;
                 }
 
@@ -152,54 +149,155 @@
                     store_address: "عنوان المتجر",
                     store_area: "نطاق المتجر",
                     store_region: "منطقة المتجر",
-                    store_city: "محافظة المتجر",
+                    store_city: "المحافظة",
                     shop_name: "اسم المحل",
                     shop_address: "عنوان المحل",
                     shop_area: "نطاق المحل",
                     shop_region: "منطقة المحل",
-                    shop_city: "محافظة المحل",
+                    shop_city: "المحافظة",
                     delivery_area: "نطاق التوصيل",
                     delivery_region: "منطقة التوصيل",
-                    delivery_city: "محافظة التوصيل",
+                    delivery_city: "المحافظة",
                     phone_number: "رقم الهاتف",
                     whatsapp_number: "رقم الواتساب",
                     gmail: "البريد الإلكترونى",
                     password: "رمز المرور"
                 };
 
-                let profileData = data;
-                if (typeof data === 'string') {
-                    try { profileData = JSON.parse(data); } catch(e){}
+                let profileData = typeof data === 'string' ? JSON.parse(data) : data;
+                const role = profileData.user_role;
+                let orderedKeys = [];
+
+                if (role === 'أدمن' || role === 'admin') {
+                    orderedKeys = [
+                        'user_role', 'user_name', 'store_name', 'store_address', 'store_area', 'store_region', 'store_city',
+                        'shop_name', 'shop_address', 'shop_area', 'shop_region', 'shop_city',
+                        'delivery_area', 'delivery_region', 'delivery_city',
+                        'phone_number', 'whatsapp_number', 'gmail', 'password'
+                    ];
+                } else if (role === 'مدير' || role === 'head' || role === 'manager') {
+                    orderedKeys = ['user_role', 'user_name', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                } else if (role === 'مندوب' || role === 'rep') {
+                    orderedKeys = ['user_role', 'user_name', 'delivery_area', 'delivery_region', 'delivery_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                } else if (role === 'تاجر' || role === 'merchant' || role === 'trader') {
+                    orderedKeys = ['user_role', 'user_name', 'store_name', 'store_address', 'store_region', 'store_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                } else if (role === 'فنى' || role === 'فني' || role === 'tech' || role === 'technician') {
+                    orderedKeys = ['user_role', 'user_name', 'shop_name', 'shop_address', 'shop_region', 'shop_city', 'phone_number', 'whatsapp_number', 'gmail', 'password'];
+                } else {
+                    orderedKeys = Object.keys(profileData);
                 }
 
-                let contentHtml = "";
-                const keys = profileData ? Object.keys(profileData) : [];
+                if (!isEditMode) {
+                    // ----- وضع العرض (Read Only) -----
+                    let contentHtml = orderedKeys
+                        .filter(key => profileData.hasOwnProperty(key))
+                        .map(key => {
+                            const label = fieldLabels[key] || key;
+                            const value = (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== '') ? profileData[key] : 'غير متوفر';
+                            const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
 
-                if (keys.length > 0) {
-                    contentHtml = keys.map((key, index) => {
-                        const label = fieldLabels[key] || key;
-                        const value = profileData[key] !== null && profileData[key] !== undefined ? profileData[key] : '---';
-                        const style = getRotatingCardStyle(index);
+                            return `
+                                <div class="w-full space-y-1">
+                                    <label class="block text-xs font-semibold text-gray-500 text-right pr-2">${label}</label>
+                                    <div class="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm text-center" dir="${isLtr ? 'ltr' : 'auto'}">
+                                        ${value}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
 
-                        return `
-                            <div class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between text-sm sm:text-base">
-                                <span class="font-bold text-gray-500 text-right">${label}</span>
-                                <span class="font-semibold text-gray-800 text-left" dir="auto">${value}</span>
-                            </div>
-                        `;
-                    }).join('');
+                    profileContainer.innerHTML = contentHtml;
                 } else {
-                    contentHtml = `
-                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                            <p class="font-semibold">لا توجد بيانات متاحة</p>
-                        </div>
+                    // ----- وضع التعديل (Edit Form) -----
+                    let formFieldsHtml = orderedKeys
+                        .filter(key => profileData.hasOwnProperty(key))
+                        .map(key => {
+                            const label = fieldLabels[key] || key;
+                            const value = profileData[key] || '';
+                            const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
+                            const isReadOnly = (key === 'user_role'); // الرتبة لا تتعدل
+
+                            return `
+                                <div class="w-full space-y-1">
+                                    <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label} ${isReadOnly ? '(غير قابل للتعديل)' : ''}</label>
+                                    <input 
+                                        type="${key === 'password' ? 'password' : (key === 'gmail' ? 'email' : 'text')}" 
+                                        id="edit_${key}" 
+                                        value="${value}" 
+                                        ${isReadOnly ? 'disabled class="w-full bg-gray-200 text-gray-500 border border-gray-300 text-sm font-bold rounded-2xl px-4 py-3.5 shadow-sm text-center cursor-not-allowed"' : 'class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"'}
+                                        dir="${isLtr ? 'ltr' : 'auto'}"
+                                    >
+                                </div>
+                            `;
+                        }).join('');
+
+                    profileContainer.innerHTML = `
+                        <form onsubmit="handleSavePersonalProfile(event)" class="space-y-4">
+                            ${formFieldsHtml}
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all text-sm cursor-pointer mt-6">
+                                حفظ التغييرات
+                            </button>
+                        </form>
                     `;
                 }
-
-                profileContainer.innerHTML = contentHtml;
             } catch (err) {
-                console.error("Error fetching personal profile:", err);
+                console.error(err);
                 profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
+            }
+        }
+
+        // ================= دالة حفظ التغييرات واستدعاء الـ RPC =================
+        async function handleSavePersonalProfile(e) {
+            e.preventDefault();
+
+            const getVal = (id) => {
+                const el = document.getElementById(`edit_${id}`);
+                return el ? el.value.trim() : null;
+            };
+
+            try {
+                const { data, error } = await supabaseClient.rpc('update_personal_profile', {
+                    p_user_id: currentUserId,
+                    p_user_name: getVal('user_name'),
+                    p_store_name: getVal('store_name'),
+                    p_store_address: getVal('store_address'),
+                    p_store_area: getVal('store_area'),
+                    p_store_region: getVal('store_region'),
+                    p_store_city: getVal('store_city'),
+                    p_shop_name: getVal('shop_name'),
+                    p_shop_address: getVal('shop_address'),
+                    p_shop_area: getVal('shop_area'),
+                    p_shop_region: getVal('shop_region'),
+                    p_shop_city: getVal('shop_city'),
+                    p_delivery_area: getVal('delivery_area'),
+                    p_delivery_region: getVal('delivery_region'),
+                    p_delivery_city: getVal('delivery_city'),
+                    p_phone_number: getVal('phone_number'),
+                    p_whatsapp_number: getVal('whatsapp_number'),
+                    p_gmail: getVal('gmail'),
+                    p_password: getVal('password')
+                });
+
+                if (error) {
+                    alert("خطأ أثناء حفظ التغييرات: " + error.message);
+                    return;
+                }
+
+                if (data && data.success) {
+                    alert(data.message || "تم تحديث البيانات بنجاح");
+                    
+                    // تحديث بيانات الاسم ورقم الهاتف في رأس الصفحة فوراً
+                    if (getVal('user_name')) currentUserName = getVal('user_name');
+                    if (getVal('phone_number')) currentUserPhone = getVal('phone_number');
+                    
+                    // العودة لوضع العرض بعد الحفظ
+                    await renderPersonalProfileScreen(false);
+                } else {
+                    alert(data?.message || "تعذر حفظ البيانات");
+                }
+            } catch (err) {
+                console.error("Save profile error:", err);
+                alert("حدث خطأ غير متوقع أثناء الحفظ");
             }
         }
 
@@ -232,19 +330,16 @@
                 <div class="flex-1 overflow-y-auto p-2">
                     <form onsubmit="handleRegisterRepresentative(event)" class="space-y-4 max-w-xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
                         
-                        <!-- الرتبة (تلقائي مندوب) -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">الرتبة (تلقائي)</label>
                             <input type="text" value="مندوب" disabled class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-100 text-gray-500 text-sm font-bold" dir="auto">
                         </div>
 
-                        <!-- الاسم -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">الاسم</label>
                             <input type="text" id="repName" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="auto" placeholder="ادخل اسم المندوب">
                         </div>
 
-                        <!-- المحافظة -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">المحافظة</label>
                             <select id="repCity" onchange="updateRegionsList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
@@ -253,7 +348,6 @@
                             </select>
                         </div>
 
-                        <!-- منطقة التوصيل -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">منطقة التوصيل</label>
                             <select id="repRegion" onchange="updateAreasList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
@@ -261,7 +355,6 @@
                             </select>
                         </div>
 
-                        <!-- نطاق التوصيل -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">نطاق التوصيل</label>
                             <select id="repArea" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
@@ -269,25 +362,21 @@
                             </select>
                         </div>
 
-                        <!-- رقم الهاتف -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الهاتف</label>
                             <input type="text" id="repPhone" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
                         </div>
 
-                        <!-- رقم الواتساب -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رقم الواتساب</label>
                             <input type="text" id="repWhatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="01xxxxxxxxx">
                         </div>
 
-                        <!-- البريد الإلكتروني -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">البريد الإلكترونى</label>
                             <input type="email" id="repGmail" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="example@gmail.com">
                         </div>
 
-                        <!-- رمز المرور -->
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
                             <input type="password" id="repPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="••••••••">
@@ -763,7 +852,6 @@
             return { bg: "bg-gray-50 hover:bg-blue-50/60", border: "border-gray-200 hover:border-blue-200", text: "text-gray-800", icon: "text-gray-400 group-hover:text-blue-500" };
         }
 
-        // ================= قالب الهيدر (مع عرض الرتبة والاسم ورقم الهاتف فوق على الشمال) =================
         function getHeaderTemplate() {
             const userInfoHtml = currentUserId && currentUserName ? `
                 <div class="flex items-center gap-1.5 bg-blue-50/80 border border-blue-200 px-3 py-1.5 rounded-xl shadow-sm text-xs" dir="auto">
@@ -787,7 +875,6 @@
                             <span>القائمة</span>
                         </button>
 
-                        <!-- عرض بيانات المستخدم الحالي فوق على الشمال -->
                         ${userInfoHtml}
                     </div>
 
@@ -926,7 +1013,7 @@
             }
         }
 
-        // ================= 3. دالة تسجيل الدخول (مع جلب البيانات الشخصية فوراً) =================
+        // ================= 3. دالة تسجيل الدخول =================
         async function handleLoginSubmit(e) {
             e.preventDefault();
             const phone = document.getElementById('loginPhone').value.trim();
@@ -953,7 +1040,6 @@
 
             currentUserId = data.id; 
 
-            // جلب البيانات الشخصية للمستخدم فوراً لتخزينها في المتغيرات وعرضها بالهيدر
             try {
                 const profileRes = await supabaseClient.rpc('get_personal_profile', {
                     p_user_id: currentUserId
