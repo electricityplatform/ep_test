@@ -61,6 +61,81 @@
         let currentBatteryModel = "";
         let heartbeatInterval = null;
 
+        // ================= الثوابت والدوال المساعدة للمحافظات والمناطق =================
+        const EGYPTIAN_GOVERNORATES = [
+            "أسوان", "الأقصر", "قنا", "البحر الأحمر", "الوادي الجديد", "سوهاج", "أسيوط", 
+            "المنيا", "بني سويف", "الجيزة", "القاهرة", "سيناء", "بورسعيد", "كفر الشيخ", 
+            "دمياط", "الدقهلية", "الشرقية", "الغربية", "المنوفية", "الفيوم", "بحيرة", 
+            "الإسكندرية", "مطروح"
+        ];
+
+        function getGovernoratesOptionsHtml(selectedValue = "") {
+            return `<option value="">اختر المحافظة...</option>` + 
+                EGYPTIAN_GOVERNORATES.map(gov => 
+                    `<option value="${gov}" ${gov === selectedValue ? 'selected' : ''}>${gov}</option>`
+                ).join('');
+        }
+
+        function getRegionsListForCity(city) {
+            if (city === 'أسوان') {
+                return ['إدفو', 'كوم أمبو', 'دراو', 'مركز أسوان'];
+            } else if (city) {
+                return [`${city} - عام`];
+            }
+            return [];
+        }
+
+        function getAreasListForRegion(region) {
+            if (region === 'مركز أسوان') {
+                return ['السيل', 'الطابية', 'النفق', 'التأمين'];
+            } else if (region) {
+                return ['عام'];
+            }
+            return [];
+        }
+
+        function updateRegionsDropdown(cityId, regionId, areaId) {
+            const cityVal = document.getElementById(cityId)?.value;
+            const regionSelect = document.getElementById(regionId);
+            const areaSelect = document.getElementById(areaId);
+
+            if (!regionSelect) return;
+
+            const regions = getRegionsListForCity(cityVal);
+            regionSelect.innerHTML = '<option value="">اختر المنطقة...</option>' + 
+                regions.map(r => `<option value="${r}">${r}</option>`).join('');
+
+            if (areaSelect) {
+                areaSelect.innerHTML = '<option value="">اختر النطاق أولاً...</option>';
+            }
+        }
+
+        function updateAreasDropdown(regionId, areaId) {
+            const regionVal = document.getElementById(regionId)?.value;
+            const areaSelect = document.getElementById(areaId);
+
+            if (!areaSelect) return;
+
+            const areas = getAreasListForRegion(regionVal);
+            areaSelect.innerHTML = '<option value="">اختر النطاق...</option>' + 
+                areas.map(a => `<option value="${a}">${a}</option>`).join('');
+        }
+
+        // ================= دالة تبديل رؤية كلمة المرور (العين) =================
+        function togglePasswordVisibility(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (!input || !icon) return;
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+            } else {
+                input.type = 'password';
+                icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`;
+            }
+        }
+
         // ================= نظام الهيرت بيت (Heartbeat) =================
         function startHeartbeat() {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -193,8 +268,12 @@
                         .filter(key => profileData.hasOwnProperty(key))
                         .map(key => {
                             const label = fieldLabels[key] || key;
-                            const value = (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== '') ? profileData[key] : 'غير متوفر';
+                            let value = (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== '') ? profileData[key] : 'غير متوفر';
                             const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
+
+                            if (key === 'password' && value !== 'غير متوفر') {
+                                value = '••••••••';
+                            }
 
                             return `
                                 <div class="w-full space-y-1">
@@ -208,20 +287,101 @@
 
                     profileContainer.innerHTML = contentHtml;
                 } else {
-                    // ----- وضع التعديل (Edit Form) -----
+                    // ----- وضع التعديل (Edit Form مع القوائم المنسدلة للبلدان والمناطق) -----
                     let formFieldsHtml = orderedKeys
                         .filter(key => profileData.hasOwnProperty(key))
                         .map(key => {
                             const label = fieldLabels[key] || key;
                             const value = profileData[key] || '';
                             const isLtr = (key === 'phone_number' || key === 'whatsapp_number' || key === 'gmail' || key === 'password');
-                            const isReadOnly = (key === 'user_role'); // الرتبة لا تتعدل
+                            const isReadOnly = (key === 'user_role');
+
+                            // التعامل الخاص القوائم المنسدلة (المحافظات)
+                            if (key === 'store_city' || key === 'shop_city' || key === 'delivery_city') {
+                                const prefix = key.replace('_city', '');
+                                return `
+                                    <div class="w-full space-y-1">
+                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
+                                        <select 
+                                            id="edit_${key}" 
+                                            onchange="updateRegionsDropdown('edit_${key}', 'edit_${prefix}_region', 'edit_${prefix}_area')" 
+                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
+                                        >
+                                            ${getGovernoratesOptionsHtml(value)}
+                                        </select>
+                                    </div>
+                                `;
+                            }
+
+                            // التعامل الخاص القوائم المنسدلة (المناطق)
+                            if (key === 'store_region' || key === 'shop_region' || key === 'delivery_region') {
+                                const prefix = key.replace('_region', '');
+                                const parentCity = profileData[`${prefix}_city`] || '';
+                                const regions = getRegionsListForCity(parentCity);
+
+                                return `
+                                    <div class="w-full space-y-1">
+                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
+                                        <select 
+                                            id="edit_${key}" 
+                                            onchange="updateAreasDropdown('edit_${key}', 'edit_${prefix}_area')" 
+                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
+                                        >
+                                            <option value="">اختر المنطقة...</option>
+                                            ${regions.map(r => `<option value="${r}" ${r === value ? 'selected' : ''}>${r}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                            }
+
+                            // التعامل الخاص القوائم المنسدلة (النطاق)
+                            if (key === 'store_area' || key === 'shop_area' || key === 'delivery_area') {
+                                const prefix = key.replace('_area', '');
+                                const parentRegion = profileData[`${prefix}_region`] || '';
+                                const areas = getAreasListForRegion(parentRegion);
+
+                                return `
+                                    <div class="w-full space-y-1">
+                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
+                                        <select 
+                                            id="edit_${key}" 
+                                            class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-pointer"
+                                        >
+                                            <option value="">اختر النطاق...</option>
+                                            ${areas.map(a => `<option value="${a}" ${a === value ? 'selected' : ''}>${a}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                `;
+                            }
+
+                            // التعامل الخاص برمز المرور مع العين
+                            if (key === 'password') {
+                                return `
+                                    <div class="w-full space-y-1">
+                                        <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label}</label>
+                                        <div class="relative">
+                                            <input 
+                                                type="password" 
+                                                id="edit_${key}" 
+                                                value="${value}" 
+                                                class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 pl-12 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                                                dir="ltr"
+                                            >
+                                            <button type="button" onclick="togglePasswordVisibility('edit_${key}', 'eyeIcon_${key}')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
+                                                <svg id="eyeIcon_${key}" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
 
                             return `
                                 <div class="w-full space-y-1">
                                     <label class="block text-xs font-semibold text-gray-600 text-right pr-2">${label} ${isReadOnly ? '(غير قابل للتعديل)' : ''}</label>
                                     <input 
-                                        type="${key === 'password' ? 'password' : (key === 'gmail' ? 'email' : 'text')}" 
+                                        type="${key === 'gmail' ? 'email' : 'text'}" 
                                         id="edit_${key}" 
                                         value="${value}" 
                                         ${isReadOnly ? 'disabled class="w-full bg-gray-200 text-gray-500 border border-gray-300 text-sm font-bold rounded-2xl px-4 py-3.5 shadow-sm text-center cursor-not-allowed"' : 'class="w-full bg-white border border-blue-400 text-gray-800 text-sm font-semibold rounded-2xl px-4 py-3.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"'}
@@ -286,11 +446,9 @@
                 if (data && data.success) {
                     alert(data.message || "تم تحديث البيانات بنجاح");
                     
-                    // تحديث بيانات الاسم ورقم الهاتف في رأس الصفحة فوراً
                     if (getVal('user_name')) currentUserName = getVal('user_name');
                     if (getVal('phone_number')) currentUserPhone = getVal('phone_number');
                     
-                    // العودة لوضع العرض بعد الحفظ
                     await renderPersonalProfileScreen(false);
                 } else {
                     alert(data?.message || "تعذر حفظ البيانات");
@@ -306,13 +464,6 @@
             toggleSidebar();
 
             const container = document.getElementById('appContainer');
-            
-            const egyptianGovernorates = [
-                "أسوان", "الأقصر", "قنا", "البحر الأحمر", "الوادي الجديد", "سوهاج", "أسيوط", 
-                "المنيا", "بني سويف", "الجيزة", "القاهرة", "سيناء", "بورسعيد", "كفر الشيخ", 
-                "دمياط", "الدقهلية", "الشرقية", "الغربية", "المنوفية", "الفيوم", "بحيرة", 
-                "الإسكندرية", "مطروح"
-            ];
 
             container.innerHTML = `
                 ${getHeaderTemplate()}
@@ -342,15 +493,14 @@
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">المحافظة</label>
-                            <select id="repCity" onchange="updateRegionsList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
-                                <option value="">اختر المحافظة...</option>
-                                ${egyptianGovernorates.map(gov => `<option value="${gov}">${gov}</option>`).join('')}
+                            <select id="repCity" onchange="updateRegionsDropdown('repCity', 'repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                                ${getGovernoratesOptionsHtml()}
                             </select>
                         </div>
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">منطقة التوصيل</label>
-                            <select id="repRegion" onchange="updateAreasList()" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
+                            <select id="repRegion" onchange="updateAreasDropdown('repRegion', 'repArea')" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50 cursor-pointer">
                                 <option value="">اختر المحافظة أولاً...</option>
                             </select>
                         </div>
@@ -379,7 +529,14 @@
 
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
-                            <input type="password" id="repPassword" required class="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="••••••••">
+                            <div class="relative">
+                                <input type="password" id="repPassword" required class="w-full px-4 py-2.5 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr" placeholder="••••••••">
+                                <button type="button" onclick="togglePasswordVisibility('repPassword', 'repEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
+                                    <svg id="repEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all text-sm cursor-pointer">
@@ -390,38 +547,6 @@
             `;
 
             loadDynamicMenuIntoSidebar();
-        }
-
-        function updateRegionsList() {
-            const city = document.getElementById('repCity').value;
-            const regionSelect = document.getElementById('repRegion');
-            const areaSelect = document.getElementById('repArea');
-            
-            regionSelect.innerHTML = '<option value="">اختر منطقة التوصيل...</option>';
-            areaSelect.innerHTML = '<option value="">اختر نطاق التوصيل أولاً...</option>';
-
-            if (city === 'أسوان') {
-                ['إدفو', 'كوم أمبو', 'دراو', 'مركز أسوان'].forEach(r => {
-                    regionSelect.innerHTML += `<option value="${r}">${r}</option>`;
-                });
-            } else if (city) {
-                regionSelect.innerHTML += `<option value="${city} - عام">${city} - عام</option>`;
-            }
-        }
-
-        function updateAreasList() {
-            const region = document.getElementById('repRegion').value;
-            const areaSelect = document.getElementById('repArea');
-            
-            areaSelect.innerHTML = '<option value="">اختر النطاق...</option>';
-
-            if (region === 'مركز أسوان') {
-                ['السيل', 'الطابية', 'النفق', 'التأمين'].forEach(a => {
-                    areaSelect.innerHTML += `<option value="${a}">${a}</option>`;
-                });
-            } else if (region) {
-                areaSelect.innerHTML += `<option value="عام">عام</option>`;
-            }
         }
 
         async function handleRegisterRepresentative(e) {
@@ -973,7 +1098,14 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-gray-600 mb-1">رمز المرور</label>
-                                    <input type="password" id="loginPassword" required class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
+                                    <div class="relative">
+                                        <input type="password" id="loginPassword" required class="w-full px-4 py-3 pl-12 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" dir="ltr">
+                                        <button type="button" onclick="togglePasswordVisibility('loginPassword', 'loginEyeIcon')" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 focus:outline-none p-1">
+                                            <svg id="loginEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 <div class="flex items-center gap-2">
