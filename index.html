@@ -178,6 +178,11 @@
                                 <span>إلغاء التعديل</span>
                             </button>
                         `}
+
+                        <!-- زر حذف الحساب -->
+                        <button type="button" onclick="handleDeletePersonalProfile()" class="bg-red-50 hover:bg-red-100 text-red-600 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 border border-red-200 cursor-pointer">
+                            <span>حذف الحساب</span>
+                        </button>
                     </div>
                     <h2 class="text-base sm:text-lg font-bold text-gray-800">
                         ${isEditMode ? 'تعديل البيانات الشخصية' : 'البيانات الشخصية'}
@@ -191,6 +196,38 @@
 
             loadDynamicMenuIntoSidebar();
             await fetchAndDisplayPersonalProfile(isEditMode);
+        }
+
+        // ================= دالة حذف الحساب الشخصي (عبر RPC الجديد) =================
+        async function handleDeletePersonalProfile() {
+            if (!currentUserId) {
+                alert("عفواً، لا يوجد مستخدم مسجل حالياً");
+                return;
+            }
+
+            const confirmDelete = confirm("هل أنت متأكد من رغبتك في حذف حسابك نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.");
+            if (!confirmDelete) return;
+
+            try {
+                const { data, error } = await supabaseClient.rpc('delete_personal_profile', {
+                    p_user_id: currentUserId
+                });
+
+                if (error) {
+                    alert("خطأ أثناء حذف الحساب: " + error.message);
+                    return;
+                }
+
+                if (data && data.success) {
+                    alert(data.message || "تم حذف المستخدم بنجاح");
+                    loginAsVisitor();
+                } else {
+                    alert(data?.message || "فشل العثور على المستخدم للحذف");
+                }
+            } catch (err) {
+                console.error("Delete personal profile error:", err);
+                alert("حدث خطأ غير متوقع أثناء عملية الحذف");
+            }
         }
 
         // ================= دالة جلب وعرض/تعديل البيانات الشخصية =================
@@ -335,7 +372,7 @@
                                 `;
                             }
 
-                            // 3. النطاق (store_area / shop_area / delivery_area) - جعلها رمادية وغير قابلة للتعديل
+                            // 3. النطاق (store_area / shop_area / delivery_area) - رمادية وغير قابلة للتعديل
                             if (key === 'store_area' || key === 'shop_area' || key === 'delivery_area') {
                                 return `
                                     <div class="w-full space-y-1">
