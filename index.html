@@ -74,6 +74,132 @@
             }, 10000);
         }
 
+        // ================= دالة عرض شاشة البيانات الشخصية =================
+        async function renderPersonalProfileScreen() {
+            toggleSidebar();
+
+            const container = document.getElementById('appContainer');
+            container.innerHTML = `
+                ${getHeaderTemplate()}
+                <div class="flex items-center justify-between mb-4 flex-shrink-0 flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="renderMainDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 cursor-pointer">
+                            <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            <span>رجوع</span>
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); fetchAndDisplayPersonalProfile();" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1 border border-blue-200 cursor-pointer" title="تحديث البيانات">
+                            <svg class="w-4 h-4 transform transition-transform hover:rotate-180 duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            <span>تحديث</span>
+                        </button>
+                    </div>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                        البيانات الشخصية
+                    </h2>
+                </div>
+                <div id="personalProfileContainer" class="flex-1 overflow-y-auto p-1 space-y-3">
+                    <div class="text-center text-gray-400 text-sm py-8">جاري جلب البيانات الشخصية...</div>
+                </div>
+            `;
+
+            loadDynamicMenuIntoSidebar();
+            await fetchAndDisplayPersonalProfile();
+        }
+
+        async function fetchAndDisplayPersonalProfile() {
+            const profileContainer = document.getElementById('personalProfileContainer');
+            if (!profileContainer) return;
+
+            if (!currentUserId) {
+                profileContainer.innerHTML = `
+                    <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
+                        <p class="font-semibold">عفواً، يجب تسجيل الدخول أولاً لعرض البيانات الشخصية</p>
+                    </div>
+                `;
+                return;
+            }
+
+            profileContainer.innerHTML = `<div class="text-center text-gray-400 text-sm py-8">جاري التحديث...</div>`;
+
+            try {
+                const { data, error } = await supabaseClient.rpc('get_personal_profile', {
+                    p_user_id: currentUserId
+                });
+
+                if (error) {
+                    showSystemAlert("خطأ في جلب البيانات الشخصية", currentUserId, "get_personal_profile", error.message);
+                    profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">تعذر جلب البيانات</div>`;
+                    return;
+                }
+
+                if (data && data.success === false) {
+                    profileContainer.innerHTML = `
+                        <div class="text-center text-red-500 py-12 bg-red-50 rounded-2xl border border-red-200">
+                            <p class="font-semibold">${data.message || 'المستخدم غير موجود'}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // التسميات العربية الدقيقة لكل عمود
+                const fieldLabels = {
+                    user_role: "الرتبة",
+                    user_name: "الاسم",
+                    store_name: "اسم المتجر",
+                    store_address: "عنوان المتجر",
+                    store_area: "نطاق المتجر",
+                    store_region: "منطقة المتجر",
+                    store_city: "محافظة المتجر",
+                    shop_name: "اسم المحل",
+                    shop_address: "عنوان المحل",
+                    shop_area: "نطاق المحل",
+                    shop_region: "منطقة المحل",
+                    shop_city: "محافظة المحل",
+                    delivery_area: "نطاق التوصيل",
+                    delivery_region: "منطقة التوصيل",
+                    delivery_city: "محافظة التوصيل",
+                    phone_number: "رقم الهاتف",
+                    whatsapp_number: "رقم الواتساب",
+                    gmail: "البريد الإلكترونى",
+                    password: "رمز المرور"
+                };
+
+                let profileData = data;
+                if (typeof data === 'string') {
+                    try { profileData = JSON.parse(data); } catch(e){}
+                }
+
+                let contentHtml = "";
+                const keys = profileData ? Object.keys(profileData) : [];
+
+                if (keys.length > 0) {
+                    contentHtml = keys.map((key, index) => {
+                        const label = fieldLabels[key] || key;
+                        const value = profileData[key] !== null && profileData[key] !== undefined ? profileData[key] : '---';
+                        const style = getRotatingCardStyle(index);
+
+                        return `
+                            <div class="w-full ${style.bg} border ${style.border} p-4 rounded-2xl shadow-sm flex items-center justify-between text-sm sm:text-base">
+                                <span class="font-bold text-gray-500 text-right">${label}</span>
+                                <span class="font-semibold text-gray-800 text-left" dir="auto">${value}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    contentHtml = `
+                        <div class="text-center text-gray-500 py-12 bg-gray-50 rounded-2xl border border-gray-200">
+                            <p class="font-semibold">لا توجد بيانات متاحة</p>
+                        </div>
+                    `;
+                }
+
+                profileContainer.innerHTML = contentHtml;
+            } catch (err) {
+                console.error("Error fetching personal profile:", err);
+                profileContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
+            }
+        }
+
         // ================= دالة عرض شاشة تسجيل مندوب جديد =================
         async function renderRegisterRepresentativeScreen() {
             toggleSidebar();
@@ -705,6 +831,8 @@
                             clickAction = "renderUserProfileMenuScreen()";
                         } else if (item.includes('تسجيل مندوب جديد')) {
                             clickAction = "renderRegisterRepresentativeScreen()";
+                        } else if (item.includes('البيانات الشخصية')) {
+                            clickAction = "renderPersonalProfileScreen()";
                         }
 
                         return `
