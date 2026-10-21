@@ -403,7 +403,7 @@
             }
         }
 
-        // ================= دالة الحفظ التلقائي الفوري =================
+        // ================= دالة الحفظ التلقائي مع تنبيه الـ alert المباشر =================
         async function handleAutoUpdateUser(targetUserId) {
             const roleEl = document.getElementById(`role_${targetUserId}`);
             const storeAreaEl = document.getElementById(`store_area_${targetUserId}`);
@@ -421,15 +421,18 @@
                 });
 
                 if (error) {
-                    console.error("خطأ أثناء التحديث التلقائي:", error.message);
+                    alert("خطأ أثناء التحديث: " + error.message);
                     return;
                 }
 
                 if (data && data.success) {
-                    console.log("تم تحديث بيانات المستخدم تلقائياً بنجاح");
+                    alert(data.message || "تم تحديث البيانات بنجاح");
+                } else {
+                    alert(data?.message || "تعذر تنفيذ التحديث");
                 }
             } catch (err) {
-                console.error("استثناء في التحديث التلقائي:", err);
+                console.error("Auto update user error:", err);
+                alert("حدث خطأ غير متوقع أثناء الحفظ");
             }
         }
 
