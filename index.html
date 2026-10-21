@@ -403,8 +403,8 @@
             }
         }
 
-        // ================= دالة حفظ تعديلات المستخدمين من لوحة الأدمن =================
-        async function handleAdminUpdateUser(targetUserId) {
+        // ================= دالة الحفظ التلقائي الفوري =================
+        async function handleAutoUpdateUser(targetUserId) {
             const roleEl = document.getElementById(`role_${targetUserId}`);
             const storeAreaEl = document.getElementById(`store_area_${targetUserId}`);
             const shopAreaEl = document.getElementById(`shop_area_${targetUserId}`);
@@ -421,19 +421,15 @@
                 });
 
                 if (error) {
-                    alert("خطأ أثناء التحديث: " + error.message);
+                    console.error("خطأ أثناء التحديث التلقائي:", error.message);
                     return;
                 }
 
                 if (data && data.success) {
-                    alert(data.message || "تم تحديث البيانات بنجاح");
-                    await fetchAndDisplayUserProfiles();
-                } else {
-                    alert(data?.message || "تعذر تنفيذ التحديث");
+                    console.log("تم تحديث بيانات المستخدم تلقائياً بنجاح");
                 }
             } catch (err) {
-                console.error("Admin update user error:", err);
-                alert("حدث خطأ غير متوقع أثناء الحفظ");
+                console.error("استثناء في التحديث التلقائي:", err);
             }
         }
 
@@ -641,7 +637,6 @@
                                     <th class="p-3.5 font-bold">رقم الواتساب</th>
                                     <th class="p-3.5 font-bold">البريد الإلكترونى</th>
                                     <th class="p-3.5 font-bold">رمز المرور</th>
-                                    <th class="p-3.5 font-bold text-center">إجراءات الحفظ</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
@@ -664,13 +659,18 @@
 
                                     const userId = user.id;
 
+                                    // استخراج النطاقات بناءً على المنطقة لكل قسم
+                                    const storeAreas = getAreasListForRegion(user.store_region);
+                                    const shopAreas = getAreasListForRegion(user.shop_region);
+                                    const deliveryAreas = getAreasListForRegion(user.delivery_region);
+
                                     return `
                                         <tr class="hover:bg-blue-50/50 transition-all">
                                             <td class="p-3.5 font-mono text-gray-700 leading-tight min-w-[130px]" dir="ltr">
                                                 <div class="font-bold text-gray-800">${datePart}</div>${timePart ? `<div class="text-[11px] text-gray-500 mt-0.5">${timePart}</div>` : ''}
                                             </td>
                                             <td class="p-3.5 font-bold text-blue-600" dir="auto">
-                                                <select id="role_${userId}" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
+                                                <select id="role_${userId}" onchange="handleAutoUpdateUser('${userId}')" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
                                                     <option value="أدمن" ${user.user_role === 'أدمن' ? 'selected' : ''}>أدمن</option>
                                                     <option value="مدير" ${user.user_role === 'مدير' ? 'selected' : ''}>مدير</option>
                                                     <option value="مندوب" ${user.user_role === 'مندوب' ? 'selected' : ''}>مندوب</option>
@@ -683,30 +683,34 @@
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_region || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">
-                                                <input type="text" id="store_area_${userId}" value="${user.store_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                                <select id="store_area_${userId}" onchange="handleAutoUpdateUser('${userId}')" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
+                                                    <option value="">اختر النطاق...</option>
+                                                    ${storeAreas.map(a => `<option value="${a}" ${user.store_area === a ? 'selected' : ''}>${a}</option>`).join('')}
+                                                </select>
                                             </td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_address || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_name || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_region || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">
-                                                <input type="text" id="shop_area_${userId}" value="${user.shop_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                                <select id="shop_area_${userId}" onchange="handleAutoUpdateUser('${userId}')" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
+                                                    <option value="">اختر النطاق...</option>
+                                                    ${shopAreas.map(a => `<option value="${a}" ${user.shop_area === a ? 'selected' : ''}>${a}</option>`).join('')}
+                                                </select>
                                             </td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_address || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_region || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">
-                                                <input type="text" id="delivery_area_${userId}" value="${user.delivery_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                                <select id="delivery_area_${userId}" onchange="handleAutoUpdateUser('${userId}')" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
+                                                    <option value="">اختر النطاق...</option>
+                                                    ${deliveryAreas.map(a => `<option value="${a}" ${user.delivery_area === a ? 'selected' : ''}>${a}</option>`).join('')}
+                                                </select>
                                             </td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.whatsapp_number || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.gmail || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.password || '---'}</td>
-                                            <td class="p-3.5 text-center">
-                                                <button onclick="handleAdminUpdateUser('${userId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer">
-                                                    حفظ
-                                                </button>
-                                            </td>
                                         </tr>
                                     `;
                                 }).join('')}
