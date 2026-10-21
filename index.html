@@ -262,10 +262,14 @@
             setTimeout(() => overlay.classList.add('hidden'), 300);
         }
 
-        // ================= الخطوة 1: القائمة الرئيسية للفلتر (رتبة أو محافظة) =================
+        // ================= الخطوة 1: القائمة الرئيسية للفلتر (تاريخ الإنشاء، رتبة، أو محافظة) =================
         function showMainFilterOptions() {
             document.getElementById('filterModalTitle').innerText = 'اختر نوع الفلترة';
             document.getElementById('filterModalBody').innerHTML = `
+                <button onclick="showDateFilterOptions()" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3.5 rounded-2xl text-right font-semibold text-gray-800 transition-all flex items-center justify-between cursor-pointer">
+                    <span>فلترة بناءً على تاريخ الإنشاء</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
                 <button onclick="showRoleFilterOptions()" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-200 p-3.5 rounded-2xl text-right font-semibold text-gray-800 transition-all flex items-center justify-between cursor-pointer">
                     <span>فلترة بناءً على الرتبة</span>
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -275,6 +279,46 @@
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             `;
+        }
+
+        // ================= خيارات ترتيب تاريخ الإنشاء =================
+        function showDateFilterOptions() {
+            document.getElementById('filterModalTitle').innerText = 'ترتيب حسب تاريخ الإنشاء';
+            document.getElementById('filterModalBody').innerHTML = `
+                <button onclick="showMainFilterOptions()" class="text-xs text-blue-600 font-semibold mb-2 flex items-center gap-1 cursor-pointer">
+                    <svg class="w-3.5 h-3.5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    <span>رجوع للخلف</span>
+                </button>
+                <div class="space-y-2">
+                    <button onclick="applyDateSortFilter('newest')" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 p-3.5 rounded-xl text-right font-semibold text-gray-800 transition-all cursor-pointer">
+                        من الأحدث للأقدم
+                    </button>
+                    <button onclick="applyDateSortFilter('oldest')" class="w-full bg-gray-50 hover:bg-blue-50 border border-gray-200 p-3.5 rounded-xl text-right font-semibold text-gray-800 transition-all cursor-pointer">
+                        من الأقدم للأحدث
+                    </button>
+                </div>
+            `;
+        }
+
+        function applyDateSortFilter(orderType) {
+            closeFilterModal();
+            if (!window.allUserProfilesCache) return;
+
+            const sortedList = [...window.allUserProfilesCache].sort((a, b) => {
+                const timeA = new Date(a.created_at || 0).getTime();
+                const timeB = new Date(b.created_at || 0).getTime();
+
+                if (orderType === 'newest') {
+                    return timeB - timeA; // الأحدث أولاً
+                } else {
+                    return timeA - timeB; // الأقدم أولاً
+                }
+            });
+
+            renderProfilesTableHTML(sortedList);
+            
+            const labelText = orderType === 'newest' ? 'تاريخ الإنشاء (من الأحدث للأقدم)' : 'تاريخ الإنشاء (من الأقدم للأحدث)';
+            showActiveFilterBadge(`فلتر نشط: ${labelText}`);
         }
 
         // ================= الخطوة 2أ: عرض خيارات الرتب =================
@@ -467,7 +511,7 @@
             }
         }
 
-        // ================= باقي الدوال (العرض، تسجيل الدخول، المنيو، إلخ كما هي تماماً) =================
+        // ================= باقي الدوال (العرض، تسجيل الدخول، المنيو، إلخ) =================
         async function renderPersonalProfileScreen(isEditMode = false) {
             if (document.getElementById('sideMenu') && !document.getElementById('sideMenu').classList.contains('translate-x-full')) {
                 toggleSidebar();
