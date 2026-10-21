@@ -403,6 +403,40 @@
             }
         }
 
+        // ================= دالة حفظ تعديلات المستخدمين من لوحة الأدمن =================
+        async function handleAdminUpdateUser(targetUserId) {
+            const roleEl = document.getElementById(`role_${targetUserId}`);
+            const storeAreaEl = document.getElementById(`store_area_${targetUserId}`);
+            const shopAreaEl = document.getElementById(`shop_area_${targetUserId}`);
+            const deliveryAreaEl = document.getElementById(`delivery_area_${targetUserId}`);
+
+            try {
+                const { data, error } = await supabaseClient.rpc('update_user_profiles', {
+                    p_user_id: currentUserId,
+                    p_target_user_id: targetUserId,
+                    p_user_role: roleEl ? roleEl.value : null,
+                    p_store_area: storeAreaEl ? storeAreaEl.value : null,
+                    p_shop_area: shopAreaEl ? shopAreaEl.value : null,
+                    p_delivery_area: deliveryAreaEl ? deliveryAreaEl.value : null
+                });
+
+                if (error) {
+                    alert("خطأ أثناء التحديث: " + error.message);
+                    return;
+                }
+
+                if (data && data.success) {
+                    alert(data.message || "تم تحديث البيانات بنجاح");
+                    await fetchAndDisplayUserProfiles();
+                } else {
+                    alert(data?.message || "تعذر تنفيذ التحديث");
+                }
+            } catch (err) {
+                console.error("Admin update user error:", err);
+                alert("حدث خطأ غير متوقع أثناء الحفظ");
+            }
+        }
+
         function openFilterModal() {
             const overlay = document.getElementById('filterModalOverlay');
             const content = document.getElementById('filterModalContent');
@@ -607,6 +641,7 @@
                                     <th class="p-3.5 font-bold">رقم الواتساب</th>
                                     <th class="p-3.5 font-bold">البريد الإلكترونى</th>
                                     <th class="p-3.5 font-bold">رمز المرور</th>
+                                    <th class="p-3.5 font-bold text-center">إجراءات الحفظ</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
@@ -627,30 +662,51 @@
                                         datePart = rawTime || '---';
                                     }
 
+                                    const userId = user.id;
+
                                     return `
                                         <tr class="hover:bg-blue-50/50 transition-all">
                                             <td class="p-3.5 font-mono text-gray-700 leading-tight min-w-[130px]" dir="ltr">
                                                 <div class="font-bold text-gray-800">${datePart}</div>${timePart ? `<div class="text-[11px] text-gray-500 mt-0.5">${timePart}</div>` : ''}
                                             </td>
-                                            <td class="p-3.5 font-bold text-blue-600" dir="auto">${user.user_role || '---'}</td>
+                                            <td class="p-3.5 font-bold text-blue-600" dir="auto">
+                                                <select id="role_${userId}" class="bg-white border border-gray-300 rounded-lg p-1 text-xs font-semibold cursor-pointer">
+                                                    <option value="أدمن" ${user.user_role === 'أدمن' ? 'selected' : ''}>أدمن</option>
+                                                    <option value="مدير" ${user.user_role === 'مدير' ? 'selected' : ''}>مدير</option>
+                                                    <option value="مندوب" ${user.user_role === 'مندوب' ? 'selected' : ''}>مندوب</option>
+                                                    <option value="تاجر" ${user.user_role === 'تاجر' ? 'selected' : ''}>تاجر</option>
+                                                    <option value="فنى" ${user.user_role === 'فنى' ? 'selected' : ''}>فنى</option>
+                                                </select>
+                                            </td>
                                             <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_name || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">
+                                                <input type="text" id="store_area_${userId}" value="${user.store_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                            </td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.store_address || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_name || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">
+                                                <input type="text" id="shop_area_${userId}" value="${user.shop_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                            </td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.shop_address || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_city || '---'}</td>
                                             <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_region || '---'}</td>
-                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">
+                                                <input type="text" id="delivery_area_${userId}" value="${user.delivery_area || ''}" class="bg-gray-50 border border-gray-300 rounded-lg p-1 text-xs w-28">
+                                            </td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.whatsapp_number || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.gmail || '---'}</td>
                                             <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.password || '---'}</td>
+                                            <td class="p-3.5 text-center">
+                                                <button onclick="handleAdminUpdateUser('${userId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer">
+                                                    حفظ
+                                                </button>
+                                            </td>
                                         </tr>
                                     `;
                                 }).join('')}
