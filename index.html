@@ -380,7 +380,7 @@
             }
         }
 
-        // ================= دالة رسم الجدول =================
+        // ================= دالة رسم الجدول (مع تاريخ الإنشاء) =================
         function renderProfilesTableHTML(profilesList) {
             const tableContainer = document.getElementById('userProfilesTableContainer');
             if (!tableContainer) return;
@@ -391,6 +391,7 @@
                         <table class="w-full text-right text-xs sm:text-sm whitespace-nowrap">
                             <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
                                 <tr>
+                                    <th class="p-3.5 font-bold whitespace-nowrap min-w-[130px]">تاريخ الإنشاء</th>
                                     <th class="p-3.5 font-bold">الرتبة</th>
                                     <th class="p-3.5 font-bold">الاسم</th>
                                     <th class="p-3.5 font-bold">اسم المتجر</th>
@@ -413,29 +414,50 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 bg-white">
-                                ${profilesList.map(user => `
-                                    <tr class="hover:bg-blue-50/50 transition-all">
-                                        <td class="p-3.5 font-bold text-blue-600" dir="auto">${user.user_role || '---'}</td>
-                                        <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.store_name || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.store_city || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.store_region || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.store_area || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.store_address || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.shop_name || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.shop_city || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.shop_region || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.shop_area || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.shop_address || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_city || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_region || '---'}</td>
-                                        <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_area || '---'}</td>
-                                        <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
-                                        <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.whatsapp_number || '---'}</td>
-                                        <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.gmail || '---'}</td>
-                                        <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.password || '---'}</td>
-                                    </tr>
-                                `).join('')}
+                                ${profilesList.map(user => {
+                                    let rawTime = user.created_at || '';
+                                    let datePart = '---';
+                                    let timePart = '';
+
+                                    if (rawTime && rawTime.includes('T')) {
+                                        const parts = rawTime.split('T');
+                                        datePart = parts[0];
+                                        timePart = parts[1] ? parts[1].split('.')[0] : '';
+                                    } else if (rawTime && rawTime.includes(' ')) {
+                                        const parts = rawTime.split(' ');
+                                        datePart = parts[0];
+                                        timePart = parts[1] || '';
+                                    } else {
+                                        datePart = rawTime || '---';
+                                    }
+
+                                    return `
+                                        <tr class="hover:bg-blue-50/50 transition-all">
+                                            <td class="p-3.5 font-mono text-gray-700 leading-tight min-w-[130px]" dir="ltr">
+                                                <div class="font-bold text-gray-800">${datePart}</div>${timePart ? `<div class="text-[11px] text-gray-500 mt-0.5">${timePart}</div>` : ''}
+                                            </td>
+                                            <td class="p-3.5 font-bold text-blue-600" dir="auto">${user.user_role || '---'}</td>
+                                            <td class="p-3.5 font-semibold text-gray-800" dir="auto">${user.user_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.store_address || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_name || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_area || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.shop_address || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_city || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_region || '---'}</td>
+                                            <td class="p-3.5 text-gray-700" dir="auto">${user.delivery_area || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.phone_number || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.whatsapp_number || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.gmail || '---'}</td>
+                                            <td class="p-3.5 font-mono text-gray-600" dir="ltr">${user.password || '---'}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
