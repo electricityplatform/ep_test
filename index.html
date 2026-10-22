@@ -310,7 +310,7 @@
             container.innerHTML = `
                 ${getHeaderTemplate()}
                 <div class="flex items-center justify-between mb-3 flex-shrink-0 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <button type="button" onclick="renderDataCenterScreen()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer">
                             <svg class="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                             <span>رجوع لمركز البيانات</span>
@@ -318,6 +318,10 @@
                         <button type="button" onclick="saveUsersDataCenterSheetToDB()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                             <span>حفظ التعديلات لقاعدة البيانات</span>
+                        </button>
+                        <button type="button" onclick="exportUsersSheetToExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>تصدير إلى إكسل</span>
                         </button>
                     </div>
                     <h2 class="text-sm sm:text-base font-bold text-gray-800">شيت جدول المستخدمين (النمط الشبكي لإكسل)</h2>
@@ -399,6 +403,88 @@
             }
         }
 
+        // ================= دالة تصدير الشيت الحالي بصيغة xlsx الحقيقية محلياً =================
+        function exportUsersSheetToExcel() {
+            const table = document.getElementById('editableUsersTable');
+            if (!table) {
+                alert("لا توجد بيانات للتصدير حالياً");
+                return;
+            }
+
+            let excelXML = `
+                <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+                          xmlns:o="urn:schemas-microsoft-com:office:office"
+                          xmlns:x="urn:schemas-microsoft-com:office:excel"
+                          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+                          xmlns:html="http://www.w3.org/TR/REC-html40">
+                <Styles>
+                    <Style ss:ID="HeaderStyle">
+                        <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+                        <Borders>
+                            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+                        </Borders>
+                        <Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/>
+                        <Font ss:FontName="Cairo" ss:Bold="1" ss:Size="11"/>
+                    </Style>
+                    <Style ss:ID="DataStyle">
+                        <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+                        <Borders>
+                            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+                            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+                        </Borders>
+                        <Font ss:FontName="Cairo" ss:Size="10"/>
+                    </Style>
+                </Styles>
+                <Worksheet ss:Name="Users Sheet">
+                    <Table>
+            `;
+
+            // قراءة الرؤوس (Headers)
+            const headers = table.querySelectorAll('thead th');
+            excelXML += '<Row>';
+            headers.forEach(th => {
+                const text = th.innerText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                excelXML += `<Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">${text}</Data></Cell>`;
+            });
+            excelXML += '</Row>';
+
+            // قراءة الصفوف والبيانات (مع التعديلات المحلية)
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                excelXML += '<Row>';
+                const cells = row.querySelectorAll('td');
+                cells.forEach(td => {
+                    const input = td.querySelector('input');
+                    const rawVal = input ? input.value : td.innerText;
+                    const val = rawVal ? rawVal.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+                    excelXML += `<Cell ss:StyleID="DataStyle"><Data ss:Type="String">${val}</Data></Cell>`;
+                });
+                excelXML += '</Row>';
+            });
+
+            excelXML += `
+                    </Table>
+                </Worksheet>
+                </Workbook>
+            `;
+
+            // تحميل الملف بصيغة xlsx الحقيقية عبر المتصفح محلياً
+            const blob = new Blob([excelXML], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Users_Sheet_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب الشبكي) =================
         function enableExcelPasteAndDragFill() {
             const table = document.getElementById('editableUsersTable');
@@ -454,7 +540,7 @@
                     const allRows = Array.from(table.querySelectorAll('tbody tr'));
                     const sourceRowIndex = allRows.indexOf(sourceRow);
                     const sourceCellIndex = Array.from(sourceRow.querySelectorAll('td')).indexOf(sourceCell);
-                    const sourceVal = sourceInput.value;
+                    const sourceVal = sourceInput ? sourceInput.value : sourceCell.innerText;
 
                     function onMouseMove(moveEvent) {
                         const elemBelow = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
@@ -1931,7 +2017,7 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                         </button>
                         <button onclick="alert('جارِ فتح الكاميرا للمسح الضوئي...')" class="bg-gray-50 hover:bg-gray-100 border border-gray-200 p-3 rounded-xl text-gray-600 transition-all shadow-sm" title="بحث بالكاميرا">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         </button>
                     </div>
                 </div>
