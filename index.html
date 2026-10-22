@@ -305,10 +305,10 @@
 
                     sheetContainer.innerHTML = `
                         <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm bg-white">
-                            <table class="w-full text-right text-xs sm:text-sm whitespace-nowrap" id="editableUsersTable">
+                            <table class="w-full text-right text-xs sm:text-sm border-collapse" id="editableUsersTable">
                                 <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
                                     <tr>
-                                        ${columns.map(col => `<th class="p-3.5 font-bold">${col}</th>`).join('')}
+                                        ${columns.map(col => `<th class="p-3.5 font-bold whitespace-nowrap min-w-[160px]">${col}</th>`).join('')}
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -316,13 +316,13 @@
                                         <tr class="hover:bg-blue-50/40 transition-all" data-id="${user.id}">
                                             ${columns.map(col => {
                                                 const val = user[col] !== null && user[col] !== undefined ? user[col] : '';
-                                                const isId = (col === 'id' || col === 'created_at');
+                                                const isId = (col === 'id' || col === 'created_at' || col === 'last_active_at');
                                                 if (isId) {
-                                                    return `<td class="p-3.5 font-mono text-gray-500 text-xs" dir="ltr">${val}</td>`;
+                                                    return `<td class="p-3.5 font-mono text-gray-500 text-xs whitespace-nowrap min-w-[160px]" dir="ltr">${val}</td>`;
                                                 }
                                                 return `
-                                                    <td class="p-2">
-                                                        <input type="text" data-field="${col}" value="${val}" class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-full focus:bg-white focus:border-blue-500" dir="auto">
+                                                    <td class="p-2 min-w-[160px]">
+                                                        <input type="text" data-field="${col}" value="${val}" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm w-full focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" dir="auto">
                                                     </td>
                                                 `;
                                             }).join('')}
