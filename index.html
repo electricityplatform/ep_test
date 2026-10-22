@@ -13,18 +13,58 @@
         body {
             font-family: 'Cairo', sans-serif;
         }
-        /* تصميم مقبض السحب (Drag Handle) للإكسل */
+
+        /* تنسيق الجدول ليصبح شبكياً متصلاً تماماً مثل Excel */
+        #editableUsersTable {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #ffffff;
+        }
+        #editableUsersTable th, #editableUsersTable td {
+            border: 1px solid #cbd5e1;
+            padding: 0 !important;
+            margin: 0;
+            position: relative;
+        }
+        #editableUsersTable th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 700;
+            padding: 8px 12px !important;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        /* تصميم حقل الإدخال ليمسح مساحة الخلية بالكامل وبدون حواف دائرية */
+        .excel-input {
+            width: 100%;
+            height: 100%;
+            border: none !important;
+            outline: none !important;
+            background: transparent !important;
+            padding: 8px 10px !important;
+            font-size: 13px;
+            color: #1e293b;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        .excel-input:focus {
+            background-color: #eff6ff !important;
+            box-shadow: inset 0 0 0 2px #2563eb !important;
+            z-index: 20;
+        }
+
+        /* تصميم مقبض السحب (Drag Handle) للإكسل في الزاوية السفلى اليسرى */
         .drag-handle {
             position: absolute;
-            bottom: 2px;
-            left: 2px;
-            width: 9px;
-            height: 9px;
+            bottom: 1px;
+            left: 1px;
+            width: 7px;
+            height: 7px;
             background-color: #2563eb;
             cursor: crosshair;
             display: none;
-            border-radius: 2px;
-            z-index: 10;
+            z-index: 30;
         }
         td:hover .drag-handle {
             display: block;
@@ -262,7 +302,7 @@
             }
         }
 
-        // ================= شيت جدول المستخدمين التفاعلي (مع ميزات الإكسل: اللصق والسحب المحسنة) =================
+        // ================= شيت جدول المستخدمين التفاعلي (النمط الشبكي لإكسل) =================
         async function renderUsersDataCenterSheet() {
             closeSidebar();
 
@@ -280,11 +320,11 @@
                             <span>حفظ التعديلات لقاعدة البيانات</span>
                         </button>
                     </div>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">شيت جدول المستخدمين (مع السحب واللصق الجماعي)</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">شيت جدول المستخدمين (النمط الشبكي لإكسل)</h2>
                 </div>
 
                 <!-- حاوية الجدول القابلة للتعديل -->
-                <div id="usersSheetContainer" class="flex-1 overflow-y-auto p-1">
+                <div id="usersSheetContainer" class="flex-1 overflow-y-auto p-1 border border-slate-300 rounded-xl bg-white shadow-inner">
                     <div class="text-center text-gray-400 text-sm py-8">جاري جلب بيانات المستخدمين كشيت...</div>
                 </div>
             `;
@@ -319,37 +359,35 @@
                     const columns = Object.keys(sampleObj);
 
                     sheetContainer.innerHTML = `
-                        <div class="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm bg-white">
-                            <table class="w-full text-right text-xs sm:text-sm border-collapse" id="editableUsersTable">
-                                <thead class="bg-gray-50 text-gray-700 border-b border-gray-200">
-                                    <tr>
-                                        ${columns.map(col => `<th class="p-3.5 font-bold whitespace-nowrap min-w-[160px]">${col}</th>`).join('')}
+                        <table id="editableUsersTable">
+                            <thead>
+                                <tr>
+                                    ${columns.map(col => `<th>${col}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${usersList.map((user, idx) => `
+                                    <tr data-id="${user.id}">
+                                        ${columns.map(col => {
+                                            const val = user[col] !== null && user[col] !== undefined ? user[col] : '';
+                                            const isId = (col === 'id' || col === 'created_at' || col === 'last_active_at');
+                                            if (isId) {
+                                                return `<td class="p-2 font-mono text-slate-500 text-xs whitespace-nowrap min-w-[150px]" dir="ltr">${val}</td>`;
+                                            }
+                                            return `
+                                                <td class="min-w-[160px] h-[38px] relative">
+                                                    <input type="text" data-field="${col}" value="${val}" class="excel-input" dir="auto">
+                                                    <div class="drag-handle" title="اسحب للتعبئة التلقائية"></div>
+                                                </td>
+                                            `;
+                                        }).join('')}
                                     </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    ${usersList.map((user, idx) => `
-                                        <tr class="hover:bg-blue-50/40 transition-all" data-id="${user.id}">
-                                            ${columns.map(col => {
-                                                const val = user[col] !== null && user[col] !== undefined ? user[col] : '';
-                                                const isId = (col === 'id' || col === 'created_at' || col === 'last_active_at');
-                                                if (isId) {
-                                                    return `<td class="p-3.5 font-mono text-gray-500 text-xs whitespace-nowrap min-w-[160px]" dir="ltr">${val}</td>`;
-                                                }
-                                                return `
-                                                    <td class="p-2 min-w-[160px] relative">
-                                                        <input type="text" data-field="${col}" value="${val}" class="excel-input bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm w-full focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" dir="auto">
-                                                        <div class="drag-handle" title="اسحب للنسخ"></div>
-                                                    </td>
-                                                `;
-                                            }).join('')}
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     `;
 
-                    // تفعيل ميزات الإكسل المحسنة
+                    // تفعيل ميزات الإكسل المتقدمة (اللصق المتعدد والسحب الشبكي)
                     enableExcelPasteAndDragFill();
 
                 } else {
@@ -361,14 +399,14 @@
             }
         }
 
-        // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب المحسن) =================
+        // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب الشبكي) =================
         function enableExcelPasteAndDragFill() {
             const table = document.getElementById('editableUsersTable');
             if (!table) return;
 
             const inputs = table.querySelectorAll('input.excel-input');
 
-            // 1. اللصق الجماعي (Multi-cell Paste) من إكسل الخارجي بدقة تامة
+            // 1. اللصق الجماعي (Multi-cell Paste) بدقة شبكية
             inputs.forEach(input => {
                 input.addEventListener('paste', function(e) {
                     e.preventDefault();
@@ -405,7 +443,7 @@
                 });
             });
 
-            // 2. النسخ عن طريق السحب (Drag Fill Handle) المحسن باستخدام مصفوفة الإحداثيات
+            // 2. السحب للتعبئة (Drag Fill Handle) باستخدام مصفوفة الإحداثيات
             const handles = table.querySelectorAll('.drag-handle');
             handles.forEach(handle => {
                 handle.addEventListener('mousedown', function(e) {
@@ -415,8 +453,7 @@
                     const sourceRow = sourceCell.closest('tr');
                     const allRows = Array.from(table.querySelectorAll('tbody tr'));
                     const sourceRowIndex = allRows.indexOf(sourceRow);
-                    const sourceCellCells = Array.from(sourceRow.querySelectorAll('td'));
-                    const sourceCellIndex = sourceCellCells.indexOf(sourceCell);
+                    const sourceCellIndex = Array.from(sourceRow.querySelectorAll('td')).indexOf(sourceCell);
                     const sourceVal = sourceInput.value;
 
                     function onMouseMove(moveEvent) {
@@ -425,10 +462,8 @@
                         if (targetCellBelow) {
                             const targetRow = targetCellBelow.closest('tr');
                             const targetRowIndex = allRows.indexOf(targetRow);
-                            const targetCellCells = Array.from(targetRow.querySelectorAll('td'));
-                            const targetCellIndex = targetCellCells.indexOf(targetCellBelow);
+                            const targetCellIndex = Array.from(targetRow.querySelectorAll('td')).indexOf(targetCellBelow);
 
-                            // تعبئة تلقائية لأسفل في نفس العمود
                             if (targetCellIndex === sourceCellIndex && targetRowIndex >= sourceRowIndex) {
                                 for (let i = sourceRowIndex; i <= targetRowIndex; i++) {
                                     const rowCells = Array.from(allRows[i].querySelectorAll('td'));
