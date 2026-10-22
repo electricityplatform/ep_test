@@ -18,12 +18,12 @@
             position: absolute;
             bottom: 2px;
             left: 2px;
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background-color: #2563eb;
             cursor: crosshair;
             display: none;
-            border-radius: 1px;
+            border-radius: 2px;
             z-index: 10;
         }
         td:hover .drag-handle {
@@ -262,7 +262,7 @@
             }
         }
 
-        // ================= شيت جدول المستخدمين التفاعلي (مع ميزات الإكسل: اللصق والسحب) =================
+        // ================= شيت جدول المستخدمين التفاعلي (مع ميزات الإكسل: اللصق والسحب المحسنة) =================
         async function renderUsersDataCenterSheet() {
             closeSidebar();
 
@@ -349,7 +349,7 @@
                         </div>
                     `;
 
-                    // تفعيل ميزات اللصق الجماعي والسحب بعد بناء الجدول
+                    // تفعيل ميزات الإكسل المحسنة
                     enableExcelPasteAndDragFill();
 
                 } else {
@@ -361,21 +361,22 @@
             }
         }
 
-        // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب للأسفل) =================
+        // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب المحسن) =================
         function enableExcelPasteAndDragFill() {
             const table = document.getElementById('editableUsersTable');
             if (!table) return;
 
             const inputs = table.querySelectorAll('input.excel-input');
 
-            // 1. اللصق الجماعي (Multi-cell Paste) من إكسل أو جداول أخرى
+            // 1. اللصق الجماعي (Multi-cell Paste) من إكسل الخارجي بدقة تامة
             inputs.forEach(input => {
                 input.addEventListener('paste', function(e) {
                     e.preventDefault();
                     const clipboardData = e.clipboardData || window.clipboardData;
                     const pastedData = clipboardData.getData('Text');
+                    if (!pastedData) return;
                     
-                    const rowsData = pastedData.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
+                    const rowsData = pastedData.split(/\r\n|\n|\r/).filter(row => row !== '');
                     if (rowsData.length === 0) return;
 
                     const currentRow = this.closest('tr');
@@ -404,7 +405,7 @@
                 });
             });
 
-            // 2. النسخ عن طريق السحب (Drag Fill Handle) من زاوية الخانة
+            // 2. النسخ عن طريق السحب (Drag Fill Handle) المحسن باستخدام مصفوفة الإحداثيات
             const handles = table.querySelectorAll('.drag-handle');
             handles.forEach(handle => {
                 handle.addEventListener('mousedown', function(e) {
@@ -414,22 +415,27 @@
                     const sourceRow = sourceCell.closest('tr');
                     const allRows = Array.from(table.querySelectorAll('tbody tr'));
                     const sourceRowIndex = allRows.indexOf(sourceRow);
-                    const sourceCellIndex = Array.from(sourceRow.querySelectorAll('td')).indexOf(sourceCell);
+                    const sourceCellCells = Array.from(sourceRow.querySelectorAll('td'));
+                    const sourceCellIndex = sourceCellCells.indexOf(sourceCell);
                     const sourceVal = sourceInput.value;
 
                     function onMouseMove(moveEvent) {
                         const elemBelow = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
                         const targetCellBelow = elemBelow?.closest('td');
-                        if (targetCellBelow && targetCellBelow !== sourceCell) {
+                        if (targetCellBelow) {
                             const targetRow = targetCellBelow.closest('tr');
                             const targetRowIndex = allRows.indexOf(targetRow);
-                            const targetCellIndex = Array.from(targetRow.querySelectorAll('td')).indexOf(targetCellBelow);
+                            const targetCellCells = Array.from(targetRow.querySelectorAll('td'));
+                            const targetCellIndex = targetCellCells.indexOf(targetCellBelow);
 
+                            // تعبئة تلقائية لأسفل في نفس العمود
                             if (targetCellIndex === sourceCellIndex && targetRowIndex >= sourceRowIndex) {
                                 for (let i = sourceRowIndex; i <= targetRowIndex; i++) {
-                                    const rowInputs = allRows[i].querySelectorAll('td');
-                                    const inputToFill = rowInputs[sourceCellIndex]?.querySelector('input.excel-input');
-                                    if (inputToFill) inputToFill.value = sourceVal;
+                                    const rowCells = Array.from(allRows[i].querySelectorAll('td'));
+                                    const inputToFill = rowCells[sourceCellIndex]?.querySelector('input.excel-input');
+                                    if (inputToFill) {
+                                        inputToFill.value = sourceVal;
+                                    }
                                 }
                             }
                         }
