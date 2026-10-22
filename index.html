@@ -136,6 +136,17 @@
             }
         }
 
+        // ================= دالة إغلاق القائمة الجانبية برمجياً =================
+        function closeSidebar() {
+            const sidebar = document.getElementById('sideMenu');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.add('translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
         // ================= نظام الهيرت بيت (Heartbeat) =================
         function startHeartbeat() {
             if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -155,7 +166,7 @@
 
         // ================= شاشة مركز البيانات (Data Center Screen) =================
         async function renderDataCenterScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -238,7 +249,7 @@
 
         // ================= شيت جدول المستخدمين التفاعلي (مركز البيانات) =================
         async function renderUsersDataCenterSheet() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -352,7 +363,6 @@
             });
 
             try {
-                // مرر المصفوفة مباشرة للـ RPC
                 const { data, error } = await supabaseClient.rpc('update_users_for_data_center', {
                     p_user_id: currentUserId,
                     p_payload: payload
@@ -377,7 +387,7 @@
 
         // ================= دالة عرض شاشة المستخدمين الجدد (آخر 24 ساعة) =================
         async function renderNewUsersScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -537,7 +547,7 @@
         }
 
         async function renderUserProfilesScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -947,9 +957,7 @@
         }
 
         async function renderPersonalProfileScreen(isEditMode = false) {
-            if (document.getElementById('sideMenu') && !document.getElementById('sideMenu').classList.contains('translate-x-full')) {
-                toggleSidebar();
-            }
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -1274,7 +1282,7 @@
         }
 
         async function renderRegisterRepresentativeScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
 
@@ -1385,7 +1393,7 @@
         }
 
         async function renderLoginHistoryScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
@@ -1578,7 +1586,7 @@
         }
 
         async function renderActiveUsersScreen() {
-            toggleSidebar();
+            closeSidebar();
 
             const container = document.getElementById('appContainer');
             container.innerHTML = `
