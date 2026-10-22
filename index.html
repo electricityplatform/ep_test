@@ -225,7 +225,6 @@
                         const style = getRotatingCardStyle(index);
                         let clickAction = `alert('تم النقر على قسم: ${item}')`;
                         
-                        // ربط زر جدول المستخدمين بالشيت التفاعلي
                         if (item.includes('جدول المستخدمين') || item.includes('بيانات المستخدمين')) {
                             clickAction = "renderUsersDataCenterSheet()";
                         }
@@ -247,7 +246,7 @@
             }
         }
 
-        // ================= شيت جدول المستخدمين التفاعلي (مركز البيانات) =================
+        // ================= شيت جدول المستخدمين التفاعلي مع ميزة اللصق الجماعي كالإكسل =================
         async function renderUsersDataCenterSheet() {
             closeSidebar();
 
@@ -313,7 +312,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     ${usersList.map((user, idx) => `
-                                        <tr class="hover:bg-blue-50/40 transition-all" data-id="${user.id}">
+                                        <tr class="hover:bg-blue-50/40 transition-all" data-row-index="${idx}" data-id="${user.id}">
                                             ${columns.map(col => {
                                                 const val = user[col] !== null && user[col] !== undefined ? user[col] : '';
                                                 const isId = (col === 'id' || col === 'created_at' || col === 'last_active_at');
@@ -322,7 +321,7 @@
                                                 }
                                                 return `
                                                     <td class="p-2 min-w-[160px]">
-                                                        <input type="text" data-field="${col}" value="${val}" class="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm w-full focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" dir="auto">
+                                                        <input type="text" data-field="${col}" value="${val}" class="excel-input bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm w-full focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" dir="auto">
                                                     </td>
                                                 `;
                                             }).join('')}
@@ -332,13 +331,62 @@
                             </table>
                         </div>
                     `;
+
+                    // تفعيل ميزة اللصق الجماعي (Multi-cell Paste مثل الإكسل) للخانات
+                    enableExcelStylePaste();
+
                 } else {
                     sheetContainer.innerHTML = `<div class="text-center text-gray-500 py-12">لا توجد بيانات مستخدمين متاحة</div>`;
                 }
-            } catch (err) {
+            }, err => {
                 console.error(err);
                 sheetContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
-            }
+            });
+        }
+
+        // ================= دالة محاكاة النسخ واللصق الجماعي مثل الإكسل =================
+        function enableExcelStylePaste() {
+            const table = document.getElementById('editableUsersTable');
+            if (!table) return;
+
+            const inputs = table.querySelectorAll('input.excel-input');
+            inputs.forEach(input => {
+                input.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const clipboardData = e.clipboardData || window.clipboardData;
+                    const pastedData = clipboardData.getData('Text');
+                    
+                    // تقسيم البيانات المنسوخة حسب الأسطر (في حال نسخ أعمدة/صفوف تحت بعض)
+                    const rowsData = pastedData.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
+                    if (rowsData.length === 0) return;
+
+                    const currentRow = this.closest('tr');
+                    const currentCell = this.closest('td');
+                    const allRows = Array.from(table.querySelectorAll('tbody tr'));
+                    const startRowIndex = allRows.indexOf(currentRow);
+                    const allCellsInRow = Array.from(currentRow.querySelectorAll('td'));
+                    const startCellIndex = allCellsInRow.indexOf(currentCell);
+
+                    // توزيع القيم على الخلايا التالية تباعاً (مثل الإكسل)
+                    rowsData.forEach((rowText, rIdx) => {
+                        const targetRow = allRows[startRowIndex + rIdx];
+                        if (!targetRow) return;
+
+                        // إذا كان النص يحتوي على تابات (أعمدة أفقية من إكسل)
+                        const colsData = rowText.split('\t');
+                        colsData.forEach((cellText, cIdx) => {
+                            const targetCells = Array.from(targetRow.querySelectorAll('td'));
+                            const targetCell = targetCells[startCellIndex + cIdx];
+                            if (!targetCell) return;
+
+                            const targetInput = targetCell.querySelector('input.excel-input');
+                            if (targetInput) {
+                                targetInput.value = cellText.trim();
+                            }
+                        });
+                    });
+                });
+            });
         }
 
         async function saveUsersDataCenterSheetToDB() {
