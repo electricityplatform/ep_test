@@ -13,6 +13,22 @@
         body {
             font-family: 'Cairo', sans-serif;
         }
+        /* تصميم مقبض السحب (Drag Handle) للإكسل */
+        .drag-handle {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            width: 8px;
+            height: 8px;
+            background-color: #2563eb;
+            cursor: crosshair;
+            display: none;
+            border-radius: 1px;
+            z-index: 10;
+        }
+        td:hover .drag-handle {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-2 sm:p-4 flex items-center justify-center relative overflow-x-hidden">
@@ -246,7 +262,7 @@
             }
         }
 
-        // ================= شيت جدول المستخدمين التفاعلي مع ميزة اللصق الجماعي كالإكسل =================
+        // ================= شيت جدول المستخدمين التفاعلي (مع ميزات الإكسل: اللصق والسحب) =================
         async function renderUsersDataCenterSheet() {
             closeSidebar();
 
@@ -264,7 +280,7 @@
                             <span>حفظ التعديلات لقاعدة البيانات</span>
                         </button>
                     </div>
-                    <h2 class="text-sm sm:text-base font-bold text-gray-800">شيت جدول المستخدمين (مركز البيانات)</h2>
+                    <h2 class="text-sm sm:text-base font-bold text-gray-800">شيت جدول المستخدمين (مع السحب واللصق الجماعي)</h2>
                 </div>
 
                 <!-- حاوية الجدول القابلة للتعديل -->
@@ -312,7 +328,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     ${usersList.map((user, idx) => `
-                                        <tr class="hover:bg-blue-50/40 transition-all" data-row-index="${idx}" data-id="${user.id}">
+                                        <tr class="hover:bg-blue-50/40 transition-all" data-id="${user.id}">
                                             ${columns.map(col => {
                                                 const val = user[col] !== null && user[col] !== undefined ? user[col] : '';
                                                 const isId = (col === 'id' || col === 'created_at' || col === 'last_active_at');
@@ -320,8 +336,9 @@
                                                     return `<td class="p-3.5 font-mono text-gray-500 text-xs whitespace-nowrap min-w-[160px]" dir="ltr">${val}</td>`;
                                                 }
                                                 return `
-                                                    <td class="p-2 min-w-[160px]">
+                                                    <td class="p-2 min-w-[160px] relative">
                                                         <input type="text" data-field="${col}" value="${val}" class="excel-input bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs sm:text-sm w-full focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all" dir="auto">
+                                                        <div class="drag-handle" title="اسحب للنسخ"></div>
                                                     </td>
                                                 `;
                                             }).join('')}
@@ -332,31 +349,32 @@
                         </div>
                     `;
 
-                    // تفعيل ميزة اللصق الجماعي (Multi-cell Paste مثل الإكسل) للخانات
-                    enableExcelStylePaste();
+                    // تفعيل ميزات اللصق الجماعي والسحب بعد بناء الجدول
+                    enableExcelPasteAndDragFill();
 
                 } else {
                     sheetContainer.innerHTML = `<div class="text-center text-gray-500 py-12">لا توجد بيانات مستخدمين متاحة</div>`;
                 }
-            }, err => {
+            } catch (err) {
                 console.error(err);
                 sheetContainer.innerHTML = `<div class="text-center text-red-400 text-sm py-8">حدث خطأ غير متوقع</div>`;
-            });
+            }
         }
 
-        // ================= دالة محاكاة النسخ واللصق الجماعي مثل الإكسل =================
-        function enableExcelStylePaste() {
+        // ================= تفعيل ميزات الإكسل (اللصق المتعدد والسحب للأسفل) =================
+        function enableExcelPasteAndDragFill() {
             const table = document.getElementById('editableUsersTable');
             if (!table) return;
 
             const inputs = table.querySelectorAll('input.excel-input');
+
+            // 1. اللصق الجماعي (Multi-cell Paste) من إكسل أو جداول أخرى
             inputs.forEach(input => {
                 input.addEventListener('paste', function(e) {
                     e.preventDefault();
                     const clipboardData = e.clipboardData || window.clipboardData;
                     const pastedData = clipboardData.getData('Text');
                     
-                    // تقسيم البيانات المنسوخة حسب الأسطر (في حال نسخ أعمدة/صفوف تحت بعض)
                     const rowsData = pastedData.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
                     if (rowsData.length === 0) return;
 
@@ -367,12 +385,10 @@
                     const allCellsInRow = Array.from(currentRow.querySelectorAll('td'));
                     const startCellIndex = allCellsInRow.indexOf(currentCell);
 
-                    // توزيع القيم على الخلايا التالية تباعاً (مثل الإكسل)
                     rowsData.forEach((rowText, rIdx) => {
                         const targetRow = allRows[startRowIndex + rIdx];
                         if (!targetRow) return;
 
-                        // إذا كان النص يحتوي على تابات (أعمدة أفقية من إكسل)
                         const colsData = rowText.split('\t');
                         colsData.forEach((cellText, cIdx) => {
                             const targetCells = Array.from(targetRow.querySelectorAll('td'));
@@ -385,6 +401,47 @@
                             }
                         });
                     });
+                });
+            });
+
+            // 2. النسخ عن طريق السحب (Drag Fill Handle) من زاوية الخانة
+            const handles = table.querySelectorAll('.drag-handle');
+            handles.forEach(handle => {
+                handle.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    const sourceCell = this.closest('td');
+                    const sourceInput = sourceCell.querySelector('input.excel-input');
+                    const sourceRow = sourceCell.closest('tr');
+                    const allRows = Array.from(table.querySelectorAll('tbody tr'));
+                    const sourceRowIndex = allRows.indexOf(sourceRow);
+                    const sourceCellIndex = Array.from(sourceRow.querySelectorAll('td')).indexOf(sourceCell);
+                    const sourceVal = sourceInput.value;
+
+                    function onMouseMove(moveEvent) {
+                        const elemBelow = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+                        const targetCellBelow = elemBelow?.closest('td');
+                        if (targetCellBelow && targetCellBelow !== sourceCell) {
+                            const targetRow = targetCellBelow.closest('tr');
+                            const targetRowIndex = allRows.indexOf(targetRow);
+                            const targetCellIndex = Array.from(targetRow.querySelectorAll('td')).indexOf(targetCellBelow);
+
+                            if (targetCellIndex === sourceCellIndex && targetRowIndex >= sourceRowIndex) {
+                                for (let i = sourceRowIndex; i <= targetRowIndex; i++) {
+                                    const rowInputs = allRows[i].querySelectorAll('td');
+                                    const inputToFill = rowInputs[sourceCellIndex]?.querySelector('input.excel-input');
+                                    if (inputToFill) inputToFill.value = sourceVal;
+                                }
+                            }
+                        }
+                    }
+
+                    function onMouseUp() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        document.removeEventListener('mouseup', onMouseUp);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
                 });
             });
         }
