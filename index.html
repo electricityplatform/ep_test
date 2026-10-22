@@ -1783,7 +1783,6 @@
                 if (container && partitionsList && partitionsList.length > 0) {
                     let partitionsHtml = partitionsList.map(name => {
                         let clickAction = "";
-                        // الترتيب الجديد: الأقسام -> شراء قطع الغيار -> الماركات -> الموديلات -> قطع الغيار
                         if (name.includes('شراء قطع الغيار')) {
                             clickAction = "renderBrandsScreen()";
                         } else if (name.includes('قطع الغيار')) {
@@ -1791,7 +1790,7 @@
                         } else if (name.includes('الماركات')) {
                             clickAction = "renderBrandsScreen()";
                         } else if (name.includes('الموديلات')) {
-                            clickAction = "renderModelsScreen('Samsung')"; // افتراضي أو حسب الاختيار
+                            clickAction = "renderModelsScreen('Samsung')";
                         } else {
                             clickAction = `alert('قسم ${name}')`;
                         }
@@ -1813,7 +1812,7 @@
             }
         }
 
-        // 1. شاشة الماركات (ثالث عنصر)
+        // 1. شاشة الماركات
         async function renderBrandsScreen(partName = '') {
             if (partName) selectedPart = partName;
 
@@ -1864,7 +1863,7 @@
             }
         }
 
-        // 2. شاشة الموديلات (رابع عنصر)
+        // 2. شاشة الموديلات
         async function renderModelsScreen(brand) {
             selectedBrand = brand;
             let tableName = "";
@@ -1953,7 +1952,7 @@
             loadDynamicMenuIntoSidebar();
         }
 
-        // 3. شاشة قطع الغيار الأخيرة (خامس عنصر - تظهر بعد اختيار الموديل)
+        // 3. شاشة قطع الغيار (بعد اختيار الموديل)
         async function renderPartsScreenAfterModel(modelName = '', modelCode = '', screenCompat = '', batteryModel = '') {
             selectedModel = modelName;
             selectedModelCode = modelCode ? decodeURIComponent(modelCode) : '';
