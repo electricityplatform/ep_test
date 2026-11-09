@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التعرف على نوع الهاتف باستخدام Gemini</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+        h2 { color: #1a73e8; margin-top: 0; }
+        label { display: block; text-align: right; margin-top: 15px; font-weight: bold; }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .buttons-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-action {
+            flex: 1;
+            background-color: #34a853;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .btn-action.gallery {
+            background-color: #fbbc05;
+            color: #202124;
+        }
+        .btn-action:hover { opacity: 0.9; }
+        .btn-submit {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .btn-submit:hover { background-color: #1557b0; }
+        #preview {
+            max-width: 100%;
+            max-height: 250px;
+            margin-top: 15px;
+            border-radius: 8px;
+            display: none;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #imageInfo {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f1f3f4;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #3c4043;
+            text-align: right;
+            display: none;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #e8f0fe;
+            color: #1967d2;
+            font-weight: bold;
+            display: none;
+            text-align: left;
+            direction: ltr;
+            white-space: pre-line;
+        }
+        input[type="file"] { display: none; }
+
+        /* ===== الشات ===== */
+        .chat-box { margin-top: 25px; border-top: 2px solid #eee; padding-top: 15px; }
+        #chatMessages {
+            height: 250px; overflow-y: auto; background: #f8f9fa;
+            border-radius: 8px; padding: 10px; text-align: right;
+        }
+        .msg { padding: 8px 12px; border-radius: 10px; margin: 6px 0; max-width: 85%; font-size: 14px; white-space: pre-line; }
+        .msg.user { background: #1a73e8; color: #fff; margin-right: 0; margin-left: auto; }
+        .msg.bot { background: #e8eaed; color: #202124; margin-left: 0; margin-right: auto; }
+        .chat-input { display: flex; gap: 8px; margin-top: 10px; }
+        .chat-input input { flex: 1; margin: 0; }
+        .chat-input button {
+            background: #1a73e8; color: #fff; border: none;
+            padding: 0 18px; border-radius: 6px; cursor: pointer; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📱 كاشف نوع الهاتف</h2>
+
+    <label for="apiKey">أدخل مفتاح Gemini API:</label>
+    <input type="text" id="apiKey" placeholder="ضع الـ API Key الخاص بك هنا">
+
+    <label>اختر طريقة إدخال الصورة:</label>
+    <div class="buttons-group">
+        <button class="btn-action" onclick="document.getElementById('cameraInput').click()">📸 التقاط صورة</button>
+        <button class="btn-action gallery" onclick="document.getElementById('galleryInput').click()">📁 معرض الصور</button>
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment">
+    <input type="file" id="galleryInput" accept="image/*">
+
+    <img id="preview" alt="معاينة الصورة">
+
+    <div id="imageInfo"></div>
+
+    <button class="btn-submit" onclick="analyzePhone()">التعرف على الهاتف</button>
+
+    <div id="result"></div>
+
+    <div class="chat-box">
+        <h3 style="margin-top:0;color:#1a73e8;">💬 اسأل عن التليفونات</h3>
+        <div id="chatMessages"></div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="اكتب سؤالك عن الهواتف...">
+            <button onclick="sendChat()">إرسال</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let selectedFile = null;
+    let processedBase64 = null;
+
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        selectedFile = file;
+        processedBase64 = null;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const originalWidth = img.width;
+                const originalHeight = img.height;
+                const originalSizeKB = (file.size / 1024).toFixed(1);
+
+                const previewImg = document.getElementById('preview');
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+
+                compressImage(file).then(result => {
+                    processedBase64 = result.base64;
+
+                    const infoDiv = document.getElementById('imageInfo');
+                    infoDiv.style.display = 'block';
+                    infoDiv.innerHTML = `
+                        📊 <b>معلومات حجم الأبعاد:</b><br>
+                        - <b>قبل الضغط:</b> ${originalWidth} × ${originalHeight} بكسل (${originalSizeKB} كيلوبايت)<br>
+                        - <b>بعد الضغط:</b> ${result.width} × ${result.height} بكسل (~${result.sizeKB} كيلوبايت)
+                    `;
+                });
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    document.getElementById('cameraInput').addEventListener('change', handleFileSelect);
+    document.getElementById('galleryInput').addEventListener('change', handleFileSelect);
+
+    // يضغط الصورة تلقائيًا لحجم لا يتجاوز 30 كيلوبايت (غالبًا بين 10 و30)
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const MAX_KB = 30;
+                    const MIN_SIDE = 384; // الحد الأدنى للضلع الأقصر
+                    const sizes = [384]; // الضلع الأقصر دايمًا 384 (ما لم تكن الصورة الأصلية أصغر)
+
+                    const kbOf = (dataUrl) => {
+                        const b64 = dataUrl.split(',')[1];
+                        const pad = (b64.match(/=+$/) || [''])[0].length;
+                        return (b64.length * 3 / 4 - pad) / 1024;
+                    };
+
+                    const render = (side, q) => {
+                        let w = img.width, h = img.height;
+                        const shortSide = Math.min(w, h);
+                        const target = Math.max(side, MIN_SIDE);
+                        if (shortSide > target) {
+                            const s = target / shortSide;
+                            w = Math.round(w * s);
+                            h = Math.round(h * s);
+                        }
+                        const c = document.createElement('canvas');
+                        c.width = w; c.height = h;
+                        c.getContext('2d').drawImage(img, 0, 0, w, h);
+                        const url = c.toDataURL('image/jpeg', q);
+                        return { url, w, h, kb: kbOf(url) };
+                    };
+
+                    let best = null;
+                    for (const side of sizes) {
+                        let lo = 0.1, hi = 0.9, found = null;
+                        for (let i = 0; i < 7; i++) {
+                            const q = (lo + hi) / 2;
+                            const r = render(side, q);
+                            if (r.kb <= MAX_KB) { found = r; lo = q; } else { hi = q; }
+                        }
+                        if (found) { best = found; break; }
+                    }
+                    if (!best) best = render(MIN_SIDE, 0.1);
+
+                    resolve({
+                        base64: best.url.split(',')[1],
+                        width: best.w,
+                        height: best.h,
+                        sizeKB: best.kb.toFixed(1)
+                    });
+                };
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function analyzePhone() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const resultDiv = document.getElementById('result');
+
+        if (!apiKey) {
+            alert('يرجى إدخال API Key الخاص بك.');
+            return;
+        }
+
+        if (!selectedFile || !processedBase64) {
+            alert('يرجى التقاط صورة أو اختيار صورة من المعرض أولاً.');
+            return;
+        }
+
+        resultDiv.style.display = 'block';
+        resultDiv.innerText = 'جاري تحليل الصورة والتعرف على الهاتف...';
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [
+                    {
+                        parts: [
+                            { text: 'Identify the phone in the image. Reply in English only. Write only the phone name (brand and model) on the first line, then other possible matching devices, one per line under each other. No details, no explanation, no intro, no numbering, no symbols.' },
+                            {
+                                inline_data: {
+                                    mime_type: 'image/jpeg',
+                                    data: processedBase64
+                                }
+                            }
+                        ]
+                    }
+                ],
+                tools: [{ google_search: {} }]
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.candidates && data.candidates[0].content.parts[0].text) {
+                resultDiv.innerText = data.candidates[0].content.parts.map(p => p.text || '').join('').trim();
+            } else if (data.error) {
+                resultDiv.innerText = 'حدث خطأ من API:\n' + JSON.stringify(data.error, null, 2);
+            } else {
+                resultDiv.innerText = 'لم يستطع النموذج معالجة الصورة، يرجى المحاولة مرة أخرى.';
+            }
+
+        } catch (error) {
+            console.error(error);
+            resultDiv.innerText = 'حدث خطأ أثناء الاتصال بالخادم:\n' + error.message;
+        }
+    }
+
+    // ===== الشات =====
+    let chatHistory = [];
+    let isSending = false;
+
+    // إعادة محاولة تلقائية لو الخادم مشغول (429 / 503)
+    async function fetchWithRetry(url, options, statusEl, maxRetries = 3) {
+        for (let attempt = 0; ; attempt++) {
+            const res = await fetch(url, options);
+            if ((res.status === 429 || res.status === 503) && attempt < maxRetries) {
+                statusEl.innerText = 'الخادم مشغول، جاري إعادة المحاولة...';
+                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                continue;
+            }
+            return res;
+        }
+    }
+
+    function addMsg(text, who) {
+        const box = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'msg ' + who;
+        div.innerText = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+        return div;
+    }
+
+    document.getElementById('chatInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') sendChat();
+    });
+
+    async function sendChat() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const input = document.getElementById('chatInput');
+        const text = input.value.trim();
+
+        if (!apiKey) { alert('يرجى إدخال API Key الخاص بك.'); return; }
+        if (!text) return;
+
+        if (isSending) return;
+        isSending = true;
+
+        addMsg(text, 'user');
+        input.value = '';
+        chatHistory.push({ role: 'user', parts: [{ text }] });
+        const loading = addMsg('...', 'bot');
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+            const payload = {
+                system_instruction: {
+                    parts: [{ text: 'Today\'s date is ' + new Date().toISOString().slice(0, 10) + '. For latest models, releases, news and prices, ALWAYS use Google Search and never rely on your old training memory; never say a model is the latest unless search confirms it. You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in the user\'s language as a list of bullet points, each on its own line starting with "• ", one under another. Never write paragraphs. Each bullet is one short fact. Include as many useful facts as possible (all relevant specs, numbers, pros, cons, tips) and do not shorten the information. Plain text only: no markdown, no asterisks, no bold, no headings. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
+                },
+                // آخر 9 رسائل فقط (تبدأ دايمًا برسالة مستخدم)
+                contents: chatHistory.slice(-9),
+                tools: [{ google_search: {} }],
+                generationConfig: {
+                    thinkingConfig: { thinkingLevel: "minimal" }
+                }
+            };
+
+            // Streaming: النص يظهر كلمة بكلمة أثناء التوليد
+            const streamUrl = url.replace(':generateContent?', ':streamGenerateContent?alt=sse&');
+            const response = await fetchWithRetry(streamUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }, loading);
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                loading.innerText = 'خطأ: ' + (errData.error ? errData.error.message : response.status);
+                chatHistory.pop();
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            const chatBox = document.getElementById('chatMessages');
+            let buffer = '';
+            let reply = '';
+            loading.innerText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    try {
+                        const j = JSON.parse(line.slice(5).trim());
+                        const t = j.candidates && j.candidates[0].content.parts[0].text;
+                        if (t) {
+                            reply += t;
+                            loading.innerText = reply;
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            if (reply) {
+                chatHistory.push({ role: 'model', parts: [{ text: reply.trim() }] });
+            } else {
+                loading.innerText = 'لم أستطع الرد، حاول مرة أخرى.';
+                chatHistory.pop();
+            }
+        } catch (err) {
+            loading.innerText = 'حدث خطأ في الاتصال: ' + err.message;
+            chatHistory.pop();
+        } finally {
+            isSending = false;
+        }
+    }
+</script>
+
+</body>
+</html>
