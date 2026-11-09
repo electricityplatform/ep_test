@@ -358,19 +358,52 @@
                 }
             };
 
-            const response = await fetch(url, {
+            // Streaming: النص يظهر كلمة بكلمة أثناء التوليد
+            const streamUrl = url.replace(':generateContent?', ':streamGenerateContent?alt=sse&');
+            const response = await fetch(streamUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await response.json();
 
-            if (data.candidates && data.candidates[0].content.parts[0].text) {
-                const reply = data.candidates[0].content.parts[0].text.trim();
-                loading.innerText = reply;
-                chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                loading.innerText = 'خطأ: ' + (errData.error ? errData.error.message : response.status);
+                chatHistory.pop();
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            const chatBox = document.getElementById('chatMessages');
+            let buffer = '';
+            let reply = '';
+            loading.innerText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data:')) continue;
+                    try {
+                        const j = JSON.parse(line.slice(5).trim());
+                        const t = j.candidates && j.candidates[0].content.parts[0].text;
+                        if (t) {
+                            reply += t;
+                            loading.innerText = reply;
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    } catch (e) {}
+                }
+            }
+
+            if (reply) {
+                chatHistory.push({ role: 'model', parts: [{ text: reply.trim() }] });
             } else {
-                loading.innerText = data.error ? 'خطأ: ' + data.error.message : 'لم أستطع الرد، حاول مرة أخرى.';
+                loading.innerText = 'لم أستطع الرد، حاول مرة أخرى.';
                 chatHistory.pop();
             }
         } catch (err) {
