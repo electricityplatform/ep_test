@@ -349,9 +349,13 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
             const payload = {
                 system_instruction: {
-                    parts: [{ text: 'You are an assistant specialized ONLY in mobile phones (specs, comparisons, prices, problems, repair, buying advice, accessories). Answer very briefly in 1-3 short sentences, in the same language the user writes in. If the question is not about phones, reply only with: "أنا متخصص في الهواتف فقط."' }]
+                    parts: [{ text: 'You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in 1-2 short sentences in the user\'s language. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
                 },
-                contents: chatHistory
+                contents: chatHistory,
+                generationConfig: {
+                    maxOutputTokens: 150,
+                    thinkingConfig: { thinkingLevel: "low" }
+                }
             };
 
             const response = await fetch(url, {
