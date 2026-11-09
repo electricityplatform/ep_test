@@ -317,6 +317,20 @@
 
     // ===== الشات =====
     let chatHistory = [];
+    let isSending = false;
+
+    // إعادة محاولة تلقائية لو الخادم مشغول (429 / 503)
+    async function fetchWithRetry(url, options, statusEl, maxRetries = 3) {
+        for (let attempt = 0; ; attempt++) {
+            const res = await fetch(url, options);
+            if ((res.status === 429 || res.status === 503) && attempt < maxRetries) {
+                statusEl.innerText = 'الخادم مشغول، جاري إعادة المحاولة...';
+                await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                continue;
+            }
+            return res;
+        }
+    }
 
     function addMsg(text, who) {
         const box = document.getElementById('chatMessages');
@@ -340,6 +354,9 @@
         if (!apiKey) { alert('يرجى إدخال API Key الخاص بك.'); return; }
         if (!text) return;
 
+        if (isSending) return;
+        isSending = true;
+
         addMsg(text, 'user');
         input.value = '';
         chatHistory.push({ role: 'user', parts: [{ text }] });
@@ -349,9 +366,10 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
             const payload = {
                 system_instruction: {
-                    parts: [{ text: 'You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in 1-2 short sentences in the user\'s language. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
+                    parts: [{ text: 'You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in the user\'s language as a list of bullet points, each on its own line starting with "• ", one under another. Never write paragraphs. Each bullet is one short fact. Include as many useful facts as possible (all relevant specs, numbers, pros, cons, tips) and do not shorten the information. Plain text only: no markdown, no asterisks, no bold, no headings. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
                 },
-                contents: chatHistory,
+                // آخر 9 رسائل فقط (تبدأ دايمًا برسالة مستخدم)
+                contents: chatHistory.slice(-9),
                 generationConfig: {
                     thinkingConfig: { thinkingLevel: "minimal" }
                 }
@@ -359,11 +377,11 @@
 
             // Streaming: النص يظهر كلمة بكلمة أثناء التوليد
             const streamUrl = url.replace(':generateContent?', ':streamGenerateContent?alt=sse&');
-            const response = await fetch(streamUrl, {
+            const response = await fetchWithRetry(streamUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
-            });
+            }, loading);
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
@@ -408,6 +426,8 @@
         } catch (err) {
             loading.innerText = 'حدث خطأ في الاتصال: ' + err.message;
             chatHistory.pop();
+        } finally {
+            isSending = false;
         }
     }
 </script>
