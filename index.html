@@ -275,7 +275,7 @@
         resultDiv.innerText = 'جاري تحليل الصورة والتعرف على الهاتف...';
 
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
             const payload = {
                 contents: [
@@ -364,7 +364,7 @@
         const loading = addMsg('...', 'bot');
 
         try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
             const payload = {
                 system_instruction: {
                     parts: [{ text: 'Today\'s date is ' + new Date().toISOString().slice(0, 10) + '. For latest models, releases, news and prices, ALWAYS use Google Search and never rely on your old training memory; never say a model is the latest unless search confirms it. You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in the user\'s language as a list of bullet points, each on its own line starting with "• ", one under another. Never write paragraphs. Each bullet is one short fact. Include as many useful facts as possible (all relevant specs, numbers, pros, cons, tips) and do not shorten the information. Plain text only: no markdown, no asterisks, no bold, no headings. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
@@ -373,7 +373,8 @@
                 contents: chatHistory.slice(-9),
                 tools: [{ google_search: {} }],
                 generationConfig: {
-                    thinkingConfig: { thinkingLevel: "minimal" }
+                    // Gemini 2.5 يستخدم thinkingBudget (0 = إيقاف التفكير)
+                    thinkingConfig: { thinkingBudget: 0 }
                 }
             };
 
