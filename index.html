@@ -290,7 +290,8 @@
                             }
                         ]
                     }
-                ]
+                ],
+                tools: [{ google_search: {} }]
             };
 
             const response = await fetch(url, {
@@ -302,7 +303,7 @@
             const data = await response.json();
 
             if (data.candidates && data.candidates[0].content.parts[0].text) {
-                resultDiv.innerText = data.candidates[0].content.parts[0].text.trim();
+                resultDiv.innerText = data.candidates[0].content.parts.map(p => p.text || '').join('').trim();
             } else if (data.error) {
                 resultDiv.innerText = 'حدث خطأ من API:\n' + JSON.stringify(data.error, null, 2);
             } else {
@@ -366,10 +367,11 @@
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
             const payload = {
                 system_instruction: {
-                    parts: [{ text: 'You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in the user\'s language as a list of bullet points, each on its own line starting with "• ", one under another. Never write paragraphs. Each bullet is one short fact. Include as many useful facts as possible (all relevant specs, numbers, pros, cons, tips) and do not shorten the information. Plain text only: no markdown, no asterisks, no bold, no headings. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
+                    parts: [{ text: 'Today\'s date is ' + new Date().toISOString().slice(0, 10) + '. For latest models, releases, news and prices, ALWAYS use Google Search and never rely on your old training memory; never say a model is the latest unless search confirms it. You are an assistant specialized ONLY in mobile phone technical and buying topics: specs, comparisons, prices, problems, repair, accessories. Do NOT answer about celebrities, people\'s personal belongings, news, or gossip. Never guess; if unsure, say "مش متأكد". Answer in the user\'s language as a list of bullet points, each on its own line starting with "• ", one under another. Never write paragraphs. Each bullet is one short fact. Include as many useful facts as possible (all relevant specs, numbers, pros, cons, tips) and do not shorten the information. Plain text only: no markdown, no asterisks, no bold, no headings. If the question is outside this scope, reply only with: "أنا متخصص في مواصفات ومشاكل الهواتف فقط."' }]
                 },
                 // آخر 9 رسائل فقط (تبدأ دايمًا برسالة مستخدم)
                 contents: chatHistory.slice(-9),
+                tools: [{ google_search: {} }],
                 generationConfig: {
                     thinkingConfig: { thinkingLevel: "minimal" }
                 }
